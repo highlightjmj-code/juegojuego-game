@@ -1,0 +1,3145 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>스페인어 단어 마스터 퀴즈 - ¡Aprender Español!</title>
+    
+    <!-- Google Fonts: 메인 및 헤더 전용 고품질 폰트 불러오기 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,800;1,550&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN 로드 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase v9 호환성(Compat) 라이브러리 CDN 로드 (가장 안정적이고 호환성이 뛰어남) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <!-- Tailwind 커스텀 테마 설정: 스페인 국기 느낌의 프리미엄 레드 & 골드 색상 반영 -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              spanishRed: {
+                light: '#fca5a5',
+                DEFAULT: '#C1272D', // 스페인 공식 Crimson Red
+                dark: '#8b1619',
+              },
+              spanishGold: {
+                light: '#fdf0a6',
+                DEFAULT: '#F4BF2C', // 스페인 공식 Golden Yellow
+                dark: '#b8860b',
+              },
+              spanishCream: '#FFFDF6', // 눈이 편안한 따뜻한 지중해식 크림 화이트
+            },
+            fontFamily: {
+              sans: ['Inter', 'sans-serif'],
+              display: ['Playfair Display', 'serif'],
+              accent: ['Cinzel', 'serif']
+            },
+            boxShadow: {
+              'premium': '0 10px 30px -10px rgba(193, 39, 45, 0.15)',
+              'golden': '0 10px 35px -10px rgba(244, 191, 44, 0.25)',
+            }
+          }
+        }
+      }
+    </script>
+    
+    <style>
+      /* 부드러운 화면 전환 및 오버레이 효과를 위한 전역 애니메이션 설정 */
+      .fade-in {
+        animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .wiggle {
+        animation: wiggle 0.4s ease-in-out;
+      }
+      @keyframes wiggle {
+        0%, 100% { transform: translateX(0); }
+        25% { transform: translateX(-6px); }
+        75% { transform: translateX(6px); }
+      }
+      .pulse-soft {
+        animation: pulseSoft 2s infinite;
+      }
+      @keyframes pulseSoft {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.03); opacity: 0.95; }
+      }
+    </style>
+  </head>
+  <body class="bg-gradient-to-br from-amber-50 via-spanishCream to-rose-50 min-h-screen font-sans text-gray-800 antialiased flex flex-col justify-between">
+
+    <!-- 상단 대칭 데코 레이어 (스페인 국기 컬러 리본) -->
+    <div class="w-full h-1.5 flex">
+      <div class="w-1/4 bg-spanishRed"></div>
+      <div class="w-1/2 bg-spanishGold"></div>
+      <div class="w-1/4 bg-spanishRed"></div>
+    </div>
+
+    <!-- 메인 중심 영역 -->
+    <main class="max-w-6xl w-full mx-auto p-4 md:p-6 lg:p-8 flex-grow flex items-center justify-center">
+
+      <!-- ============================================== -->
+      <!-- 1. 앱 로딩 화면 (Screen 1) -->
+      <!-- ============================================== -->
+      <section id="screen-loading" class="w-full max-w-lg bg-white rounded-3xl p-8 shadow-premium border border-amber-150 text-center fade-in">
+        <div class="flex flex-col items-center justify-center py-8">
+          <!-- 기하학적인 도자기풍 회전 로더 디자인 -->
+          <div class="relative w-16 h-16 mb-6">
+            <div class="absolute inset-0 rounded-full border-4 border-amber-100"></div>
+            <div class="absolute inset-0 rounded-full border-4 border-t-spanishRed border-r-spanishGold animate-spin"></div>
+          </div>
+          <h2 class="font-display text-2xl font-bold text-spanishRed mb-2">¡Hola! 스페인어 퀴즈 서버 연결 중</h2>
+          <p class="text-sm text-gray-500 max-w-xs mx-auto mb-4 leading-relaxed">
+            단어 사전과 실시간 랭킹 시스템을 불러오고 있으며, 연결 불가 시 똑똑한 오프라인 모드로 자동 자동 전환됩니다.
+          </p>
+          <div class="px-4 py-1.5 bg-amber-50 text-amber-800 rounded-full text-xs font-medium inline-flex items-center gap-1.5 border border-amber-200">
+            <span class="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+            서버 응답 확인 중...
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ============================================== -->
+      <!-- 2. 게임 첫 화면 / 닉네임 / 랭킹 (Screen 2) -->
+      <!-- ============================================== -->
+      <section id="screen-start" class="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch hidden fade-in">
+        
+        <!-- 왼쪽: 퀴즈 시작 및 닉네임 입력창 (lg:col-span-7) -->
+        <div class="lg:col-span-7 bg-white rounded-3xl p-6 md:p-8 shadow-premium border border-amber-100 flex flex-col justify-between">
+          <div>
+            <!-- 스페인 고풍 문양 느낌의 데코 배너 -->
+            <div class="flex items-center justify-between mb-5">
+              <span class="text-xs font-accent tracking-widest text-spanishRed font-bold">VOCABULARIO DE ESPAÑOL</span>
+              <span class="text-2xl">🇪🇸</span>
+            </div>
+
+            <!-- 대칭형 프리미엄 멀티 탭 네비게이션 마련 -->
+            <div class="flex border-b border-amber-100 mb-6 gap-2">
+              <button 
+                id="btn-tab-game" 
+                type="button"
+                class="flex-1 pb-3 text-center border-b-2 border-spanishRed text-spanishRed font-bold text-xs md:text-sm tracking-wider transition-all duration-300 flex items-center justify-center gap-2 outline-none cursor-pointer"
+              >
+                🏆 <span>퀴즈 게임 도전 (Reto)</span>
+              </button>
+              <button 
+                id="btn-tab-learn" 
+                type="button"
+                class="flex-1 pb-3 text-center border-b-2 border-transparent text-gray-400 font-semibold text-xs md:text-sm tracking-wider hover:text-gray-700 transition-all duration-300 flex items-center justify-center gap-2 outline-none cursor-pointer"
+              >
+                📖 <span>단어 & 문장 학습방 (Estudio)</span>
+              </button>
+            </div>
+
+            <!-- 탭 내용물 1: 퀴즈 게임 패널 (panel-tab-game) -->
+            <div id="panel-tab-game" class="space-y-6 fade-in">
+              <!-- 대형 웅장한 클래식 헤더 -->
+              <h1 class="font-display text-4xl md:text-5xl font-extrabold text-gray-901 tracking-tight leading-tight">
+                스페인어 기초 <br/>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-spanishRed to-amber-600 font-display">계단형 학습 퀴즈</span>
+              </h1>
+              <p class="text-gray-600 text-sm leading-relaxed">
+                지중해의 열정을 담은 스페인어 초급 필수 어휘와 일상 문장 10단계를 통과해 보세요! 단어 뜻, 예문해석 마스터 후 도전하면 명예의 전당 탑5 진입이 한결 쉬워집니다.
+              </p>
+
+              <!-- 실시간 누적 레벨 / 경험치 카드  -->
+              <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-5 border border-amber-100 flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                  <div class="w-12 h-12 bg-spanishGold rounded-xl flex items-center justify-center text-2xl shadow-md flex-shrink-0 animate-bounce select-none">
+                    ⭐
+                  </div>
+                  <div>
+                    <span class="text-[10px] text-amber-800 uppercase font-bold tracking-wider">나의 학습 숙련도</span>
+                    <h4 id="start-level-badge" class="font-bold text-stone-900 text-base font-sans">Level 1 Beginner</h4>
+                  </div>
+                </div>
+                <div class="text-right space-y-1">
+                  <p class="text-xs font-bold text-amber-900 font-mono" id="start-xp-text">0 / 300 XP</p>
+                  <div class="w-32 h-2.5 bg-amber-200/50 rounded-full overflow-hidden">
+                    <div id="start-xp-bar" class="h-full bg-spanishGold rounded-full transition-all duration-300" style="width: 0%;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 닉네임 입력 폼 영역 -->
+              <div class="bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-5 border border-amber-100">
+                <label for="input-nickname" class="block text-xs font-bold text-amber-900 uppercase tracking-wider mb-2.5">
+                  도전자 닉네임 입력 <span class="text-spanishRed">*</span>
+                </label>
+                <div class="relative">
+                  <input 
+                    type="text" 
+                    id="input-nickname" 
+                    maxlength="12"
+                    placeholder="예: 마드리드전사, 가비"
+                    class="w-full bg-white text-gray-900 rounded-xl px-4 py-3.5 pr-20 border border-amber-200 outline-none transition-all duration-300 focus:border-spanishRed focus:ring-2 focus:ring-red-100 text-sm font-semibold tracking-wide"
+                  />
+                  <span id="char-counter" class="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-mono">0/12자</span>
+                </div>
+                <p class="text-xs text-amber-700/80 mt-2.5 flex items-center gap-1">
+                  <svg class="w-3.5 h-3.5 flex-shrink-0 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                  </svg>
+                  별도의 로그인 없이 닉네임만 지정하여 간편하게 도전하실 수 있습니다.
+                </p>
+              </div>
+
+              <!-- 랜덤 캐릭터 뽑기 영역 -->
+              <div class="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-5 border border-amber-100 space-y-4">
+                <div class="flex items-center justify-between">
+                  <label class="block text-xs font-bold text-amber-900 uppercase tracking-wider">
+                    랜덤 파트너 캐릭터 매칭 <span class="text-spanishRed">*</span>
+                  </label>
+                  <span id="drawn-status" class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-500 border border-stone-200">
+                    미획득
+                  </span>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row items-center gap-4">
+                  <!-- 선택된 캐릭터 카드 디스플레이 -->
+                  <div id="character-card" class="w-full sm:w-40 h-28 bg-white border-2 border-dashed border-amber-200 rounded-xl flex flex-col items-center justify-center p-3 transition-all duration-300 relative overflow-hidden group">
+                    <div id="char-animation-holder" class="flex flex-col items-center justify-center text-center">
+                      <span id="selected-char-emoji" class="text-3xl mb-1 select-none">❓</span>
+                      <span id="selected-char-title" class="text-[11px] font-bold text-gray-400">캐릭터를 뽑아주세요</span>
+                    </div>
+                  </div>
+
+                  <!-- 뽑기 작동 영역 -->
+                  <div class="flex-grow space-y-2 w-full">
+                    <button 
+                      type="button" 
+                      id="btn-draw-char"
+                      class="w-full py-3 px-4 bg-gradient-to-r from-spanishGold to-amber-500 hover:from-amber-400 hover:to-orange-500 text-stone-950 font-bold rounded-xl text-xs tracking-wider transition-all duration-300 active:scale-[0.98] shadow-md flex items-center justify-center gap-2 cursor-pointer outline-none"
+                    >
+                      <span>🎲 랜덤 캐릭터 뽑기 (Sorteo)</span>
+                    </button>
+                    <p class="text-[10px] text-amber-800/95 leading-relaxed">
+                      버튼을 터치하면 스페인의 대표 인물 캐릭터 6가지 중 한 명이 플레이어님의 파트너로 운명 매칭됩니다. 캐릭터 매칭 후 퀴즈 참여가 개방됩니다!
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 탭 내용물 2: 예습 & 학습방 패널 (panel-tab-learn) -->
+            <div id="panel-tab-learn" class="hidden space-y-5 fade-in">
+              <div class="bg-gradient-to-br from-amber-50 to-amber-100/40 rounded-2xl p-4 border border-amber-200/80">
+                <p class="text-[11px] md:text-xs text-amber-950 font-semibold leading-relaxed">
+                  💡 <strong>스페인어 단어 & 문장 예습 코너 (Modo de Estudio)</strong><br/>
+                  퀴즈에 등장하는 필수 어휘 15종과 생활 회화 문장 15종을 먼저 집중적으로 자율 학습할 수 있습니다. 각 항목을 터치하면 <strong>명확한 뜻, 생생한 스페인어 실용 예문, 한글 해석 및 해설</strong>이 상냥히 열립니다!
+                </p>
+              </div>
+
+              <!-- 하위 카테고리 필터 버튼 탭 마련 -->
+              <div class="flex gap-2 p-1.5 bg-stone-100 rounded-xl border border-stone-200/50">
+                <button 
+                  id="btn-learn-words" 
+                  type="button"
+                  class="flex-1 py-2 text-xs font-bold bg-white text-stone-950 rounded-lg shadow-sm border border-stone-200/50 tracking-wider transition-all duration-200 outline-none cursor-pointer"
+                >
+                  🇪🇸 단어 학습 (Palabras)
+                </button>
+                <button 
+                  id="btn-learn-sentences" 
+                  type="button"
+                  class="flex-1 py-2 text-xs font-semibold text-stone-500 rounded-lg tracking-wider hover:text-stone-700 transition-all duration-200 outline-none cursor-pointer"
+                >
+                  💬 문장 학습 (Frases)
+                </button>
+              </div>
+
+              <!-- 학습 리스트 주입형 껍데기 스크롤 상자 -->
+              <div id="learn-list-container" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                <!-- 자바스크립트 엔진으로 화려한 아코디언 학습 어휘 카드를 무한 생성 동적 로드 -->
+              </div>
+            </div>
+          </div>
+
+          <!-- 시작 및 안내 동작 영역 -->
+          <div class="pt-4 border-t border-gray-150 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+              <!-- 모드 상태 뱃지 (Firebase 혹은 Local) -->
+              <span id="badge-mode" class="px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-xs font-semibold border border-emerald-200">
+                실시간 서버 연결완료
+              </span>
+            </div>
+            
+            <button 
+              id="btn-start" 
+              disabled
+              class="w-full sm:w-auto px-8 py-3.5 bg-stone-200 text-stone-400 rounded-xl font-bold text-sm tracking-widest transition-all duration-300 outline-none flex items-center justify-center gap-2 cursor-not-allowed"
+            >
+              퀴즈 시작하기 (¡Empezar!)
+              <svg class="w-4 h-4 ml-1 transform transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 실시간 랭킹 보드 (lg:col-span-5) -->
+        <div class="lg:col-span-5 bg-gradient-to-b from-stone-900 to-stone-950 text-white rounded-3xl p-6 md:p-8 shadow-premium flex flex-col justify-between border-t-4 border-spanishGold">
+          <div>
+            <!-- 헤더 타이틀 -->
+            <div class="flex items-center justify-between mb-6 pb-4 border-b border-stone-800">
+              <div class="flex items-center gap-2.5">
+                <span class="p-1.5 bg-amber-500/10 rounded-lg text-spanishGold text-lg">🎖️</span>
+                <div>
+                  <h3 class="font-display font-bold text-base tracking-wide text-amber-400">실시간 순위 보드</h3>
+                  <p class="text-[10px] text-stone-400 uppercase tracking-widest">Hall of Fame</p>
+                </div>
+              </div>
+              <span class="text-xs font-mono font-medium text-stone-400">Top 5 명예의 전당</span>
+            </div>
+
+            <!-- 하이라이트 랭킹 내용 영역 -->
+            <div id="leaderboard-container" class="space-y-3 min-h-[280px] flex flex-col justify-center">
+              <!-- JS에서 동적으로 리스트 또는 로더를 삽입하는 영역 -->
+            </div>
+          </div>
+
+          <!-- 하단 장식용 스페인어 속담 한 소절 -->
+          <div class="mt-6 pt-4 border-t border-stone-800/80 text-center">
+            <p class="text-[11px] italic font-serif text-stone-400">"El saber no ocupa lugar."</p>
+            <p class="text-[9px] text-stone-500 uppercase tracking-widest">배움은 그 어디에도 짐이 되지 않는다.</p>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ============================================== -->
+      <!-- 3. 실시간 퀴즈 해결 화면 (Screen 3) -->
+      <!-- ============================================== -->
+      <section id="screen-quiz" class="w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-premium border border-amber-100 hidden fade-in">
+        
+        <!-- 퀴즈 진행도 및 점수 상단 헤더 -->
+        <div class="bg-gradient-to-r from-spanishRed to-spanishRed-dark text-white p-5 md:p-6">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider bg-white/15 px-2.5 py-1 rounded-full text-spanishGold flex-shrink-0">스페인 단어</span>
+              <div id="quiz-partner-badge" class="flex items-center gap-1.5 bg-black/20 border border-white/10 px-2.5 py-1 rounded-full text-[11px] text-white">
+                <span id="quiz-partner-emoji" class="text-xs">💃</span>
+                <span id="quiz-partner-title" class="font-bold text-spanishGold">플라멩코 댄서</span>
+              </div>
+            </div>
+            <div class="flex items-center gap-1.5 bg-black/10 px-2.5 py-1 rounded-full text-xs">
+              <span class="text-[10.5px] text-red-150 uppercase tracking-widest">일반 점수:</span>
+              <span id="quiz-live-score" class="font-extrabold text-spanishGold font-mono text-sm">0점</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 계단형 진행도 바 -->
+        <div class="bg-stone-50 border-b border-amber-100/75 p-3.5 md:p-4">
+          <div class="flex items-center justify-between text-xs font-bold text-stone-600 mb-2 px-1">
+            <span class="flex items-center gap-1.5">
+              <span class="p-1 bg-amber-100 text-amber-800 rounded-lg text-xs leading-none">🚀</span>
+              <span>학습 진행도: <strong class="text-spanishRed text-sm" id="staircase-progress-text">Stage 1 / 10</strong></span>
+            </span>
+            <span class="text-[10px] bg-stone-200 text-stone-700 px-2.5 py-0.5 rounded-full font-sans font-bold" id="staircase-level-hud">Level 1 Beginner</span>
+          </div>
+          
+          <!-- 계단형 단계 노드 목록 (🟢 1 -> 🟡 2 -> ⚪ 3 -> ...) -->
+          <div class="flex items-center justify-between gap-1 overflow-x-auto py-1.5 scrollbar-thin" id="staircase-nodes">
+            <!-- JS 동적 렌더링 -->
+          </div>
+        </div>
+
+        <!-- 경험치 레벨 배지 및 XP 게이지 바 HUD -->
+        <div class="bg-gradient-to-r from-amber-50 to-orange-50 px-5 py-3 border-b border-amber-150 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-1.5 font-bold text-amber-900">
+            <span class="flex h-5 w-5 items-center justify-center rounded-full bg-spanishGold text-[11px] select-none shadow animate-bounce">⚡</span>
+            <span>경험치 보유: <span id="hud-level-title" class="text-spanishRed">Level 1 Beginner</span></span>
+          </div>
+          <div class="flex-grow max-w-xs space-y-1">
+            <div class="flex justify-between text-[10px] font-bold text-amber-800 font-mono">
+              <span id="hud-xp-text">0 / 300 XP</span>
+              <span id="hud-xp-percent">0%</span>
+            </div>
+            <div class="w-full h-1.5 bg-amber-250/35 rounded-full overflow-hidden">
+              <div id="hud-xp-bar" class="h-full bg-gradient-to-r from-spanishGold to-amber-500 rounded-full transition-all duration-300" style="width: 0%;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- [1] 어휘 학습 세션 패널 (Study Panel) -->
+        <div id="quiz-study-panel" class="fade-in">
+          <div class="p-5 md:p-8 bg-gradient-to-b from-amber-50/40 to-white border-b border-gray-100">
+            <div class="text-center pb-4">
+              <span class="text-[11px] font-bold text-amber-805 bg-amber-100/90 border border-amber-200 px-3 py-1 rounded-full uppercase tracking-widest inline-block mb-2 font-sans">
+                🎯 이번 단계 핵심 사전학습 (Estudio)
+              </span>
+              <h3 class="font-display text-2xl font-black text-stone-900 mt-1">이 단계의 핵심 스페인어</h3>
+              <p class="text-[11px] text-stone-500 mt-1">퀴즈를 풀기 전, 아래 단어와 뜻을 이해한 다음 문장 예문도 읽어보세요!</p>
+            </div>
+
+            <!-- 3개 단어 상세 카드 목록 -->
+            <div class="space-y-4 mt-3" id="stage-study-cards-list">
+              <!-- JS 동적 주입 -->
+            </div>
+          </div>
+
+          <div class="p-6 md:p-8 text-center bg-stone-50/80">
+            <button 
+              id="btn-confirm-study"
+              type="button"
+              class="w-full py-4 bg-gradient-to-r from-spanishRed to-red-650 hover:from-white hover:to-white hover:text-spanishRed text-white rounded-2xl font-bold text-sm tracking-widest shadow-md transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99] outline-none flex items-center justify-center gap-2 cursor-pointer border-2 border-transparent hover:border-spanishRed"
+            >
+              <span>성실히 학습 완료! 퀴즈 시작하기 (Iniciar Reto) ⚡</span>
+              <svg class="w-4 h-4 ml-1 animate-pulse" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- [2] 실전 퀴즈 풀기 패널 (Quiz Panel, 기본 숨김) -->
+        <div id="quiz-test-panel" class="hidden fade-in">
+          <!-- 질문 어휘 카드 영역 -->
+          <div class="p-6 md:p-8 bg-gradient-to-b from-amber-50/20 to-white border-b border-gray-100">
+            <div class="text-center py-4">
+              <span id="quiz-question-type-badge" class="text-[11px] font-bold text-spanishRed/80 bg-red-50 border border-red-100 px-3 py-1 rounded-full uppercase tracking-widest inline-block mb-3">En Español</span>
+              <!-- 메인 스페인 단어 출력 -->
+              <h2 id="quiz-question-word" class="font-display text-4xl md:text-5xl font-extrabold text-stone-900 tracking-tight leading-tight select-none">
+                hola
+              </h2>
+              <!-- 사용자를 위한 문제 풀이 힌트 가이드 노출 -->
+              <p id="quiz-question-guide" class="text-xs text-stone-500 mt-2 font-semibold">올바른 한국어 뜻을 선택하세요.</p>
+              <div class="w-12 h-1 bg-spanishGold mx-auto mt-4 rounded-full"></div>
+            </div>
+          </div>
+
+          <!-- 4지선다 보기 리스트 구역 -->
+          <div class="p-6 md:p-8">
+            <div id="quiz-options-group" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- 동적으로 생성되는 4가지 버튼 구성 영역 -->
+            </div>
+
+            <!-- 실시간 해설 및 결과 피드백 상자 -->
+            <div id="quiz-feedback-box" class="mt-6 p-4 rounded-2xl invisible flex items-start gap-3 border transition-all duration-300">
+              <!-- 동적으로 성공/실패 여부에 따라 아이콘 및 설명 렌더링 -->
+            </div>
+
+            <!-- 하단 진행 버튼 제어 단추 -->
+            <div class="mt-6 pt-5 border-t border-gray-150 flex justify-end">
+              <button 
+                id="btn-next-question" 
+                disabled
+                class="w-full md:w-auto px-6 py-3 bg-gradient-to-r from-stone-800 to-stone-900 text-white rounded-xl font-bold text-sm tracking-wider shadow-lg transition-all duration-300 hover:bg-stone-950 active:scale-[0.98] outline-none disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2"
+              >
+                <span id="btn-next-text">정답을 선택해주세요</span>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================== -->
+      <!-- 5. 중간고사 및 최종고사 실시간 패널 (Screen 5) -->
+      <!-- ============================================== -->
+      <section id="screen-exam" class="w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-premium border border-amber-100 hidden fade-in">
+        
+        <!-- 시험용 강렬한 골드 및 다크 헤더 바 -->
+        <div class="bg-gradient-to-r from-stone-900 to-stone-950 text-white p-6 relative">
+          <!-- 스페인 장식 문양 비주얼 백그라운드 효과 -->
+          <div class="absolute right-4 top-4 text-3xl font-bold text-stone-800/25 pointer-events-none uppercase tracking-widest select-none">EXAMEN</div>
+          
+          <div class="flex items-center justify-between mb-2">
+            <span id="exam-badge-title" class="text-xs font-bold uppercase tracking-wider bg-spanishGold text-stone-950 px-2.5 py-1 rounded-full flex-shrink-0 animate-pulse">중간 시험</span>
+            <span id="exam-hud-nickname" class="text-xs text-stone-400 font-bold">도전자님</span>
+          </div>
+          
+          <h2 id="exam-main-title" class="font-display text-2xl font-black text-spanishGold">스페인어 기초 중간 시험</h2>
+          <p class="text-xs text-stone-400 mt-1" id="exam-desc-subtitle">Stage 1~5에서 학습한 어휘 범주에서 5문제가 정선 출제됩니다.</p>
+        </div>
+
+        <!-- 시험 시작 인트로 서브 스크린 -->
+        <div id="exam-intro-sub" class="p-8 text-center space-y-6 fade-in">
+          <div class="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto text-4xl shadow-inner border border-amber-200">
+            📝
+          </div>
+          <div class="space-y-2">
+            <h3 class="text-xl font-bold text-stone-900" id="exam-intro-title">준비가 되셨습니까?</h3>
+            <p class="text-sm text-stone-500 max-w-md mx-auto leading-relaxed" id="exam-intro-text">
+              통과 기준은 <strong>60점 이상 (3문제 정답 완료)</strong>입니다. 중간 시험 통과 시 스테이지 6으로 진급하며, 불합격 시 합격할 때까지 틀린 문제 리뷰와 재응시가 반복 매칭됩니다.
+            </p>
+          </div>
+          <div class="p-4 bg-orange-50/50 rounded-2xl border border-amber-100 inline-block text-xs text-amber-900 max-w-sm font-semibold">
+            📢 주의: 시험 중에는 힌트 보기 및 예습 복습 가이드 힌트가 비활성화됩니다. 오직 본인의 학습 실력으로 완승 문항을 달성하세요!
+          </div>
+          <div>
+            <button 
+              id="btn-start-exam-play"
+              type="button"
+              class="px-10 py-4 bg-gradient-to-r from-spanishGold to-amber-500 hover:from-amber-400 hover:to-orange-500 text-stone-950 font-bold rounded-2xl text-sm tracking-widest shadow-md transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] outline-none flex items-center justify-center gap-2 mx-auto cursor-pointer"
+            >
+              <span>시험 시작하기 (Comenzar Examen) 🚀</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 시험 문제 진행 중 서브 스크린 (기본 숨김) -->
+        <div id="exam-play-sub" class="hidden fade-in">
+          <!-- 진행도 및 정보 게이지 -->
+          <div class="bg-amber-50 px-6 py-3 border-b border-amber-150 flex items-center justify-between text-xs font-bold">
+            <span class="text-amber-900">문제 진행 상태: <strong class="text-spanishRed text-sm" id="exam-play-progress-text">1 / 5</strong></span>
+            <span class="font-semibold text-stone-500" id="exam-play-timer-label">모든 문제 신중히 선택</span>
+          </div>
+
+          <!-- 질문 단어/문장 노출 -->
+          <div class="p-6 md:p-8 text-center bg-gradient-to-b from-stone-50 to-white border-b border-stone-100">
+            <span id="exam-play-type-badge" class="text-[10px] font-bold text-stone-600 bg-stone-100 border border-stone-200 px-2.5 py-0.5 rounded-full uppercase tracking-widest inline-block mb-3">En Español</span>
+            <h2 id="exam-play-question-word" class="font-display text-4xl md:text-5xl font-extrabold text-stone-900 tracking-tight leading-tight select-none">
+              hola
+            </h2>
+            <p id="exam-play-question-guide" class="text-xs text-stone-500 mt-2 font-medium">올바른 뜻을 선택하세요.</p>
+          </div>
+
+          <!-- 보기 버튼 그룹 -->
+          <div class="p-6 md:p-8">
+            <div id="exam-play-options-group" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- 시험 보기들 -->
+            </div>
+            
+            <!-- 다음 문제 단추 -->
+            <div class="mt-6 pt-5 border-t border-stone-150 flex justify-end font-sans">
+              <button 
+                id="btn-exam-next" 
+                disabled
+                class="w-full md:w-auto px-8 py-3 bg-stone-900 hover:bg-black text-white rounded-xl font-bold text-sm tracking-wider transition-all duration-300 disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span id="btn-exam-next-text">정답 선택 대기</span>
+                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 시험 결과 및 탈락자 복습/재시험 서브 스크린 (기본 숨김) -->
+        <div id="exam-result-sub" class="hidden p-6 md:p-8 text-center space-y-6 fade-in">
+          
+          <div class="py-4 border-b border-stone-100">
+            <span class="text-5xl block" id="exam-result-emoji">🎉</span>
+            <h3 class="font-display text-2xl font-black text-stone-900 mt-2" id="exam-result-title">중간 시험 합격!</h3>
+            <p class="text-sm text-stone-500 mt-1" id="exam-result-score-text">귀하의 시험 점수는 100점 / 100점입니다.</p>
+          </div>
+
+          <!-- 불합격 시 전용 복습 지표 리스트 홀더 -->
+          <div id="exam-result-fail-container" class="hidden text-left space-y-4">
+            <div class="flex items-center gap-2 pb-2 border-b border-red-100/50">
+              <span class="text-lg">📝</span>
+              <h4 class="font-bold text-sm text-stone-800">오답 복습 코너 (재시험 전 정독 필수!)</h4>
+            </div>
+            <div id="exam-failed-revisions-list" class="space-y-3.5 max-h-[280px] overflow-y-auto pr-1">
+              <!-- 불합격 시 틀린 단어 예문해설 동적 바인딩 -->
+            </div>
+          </div>
+
+          <!-- 하단 동작 유도 버튼 그룹 -->
+          <div class="pt-4 border-t border-stone-150 flex flex-col sm:flex-row items-center justify-center gap-4">
+            <button 
+              id="btn-exam-action-primary"
+              type="button"
+              class="w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-spanishRed to-red-650 text-white rounded-xl font-bold text-sm tracking-widest transition-all duration-300 shadow-md hover:scale-[1.02] active:scale-[0.98] outline-none flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>다음 단계 진행하기 (Siguiente)</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ============================================== -->
+      <!-- 4. 결과 통계 및 오답 노트 (Screen 4) -->
+      <!-- ============================================== -->
+      <section id="screen-result" class="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start hidden fade-in">
+        
+        <!-- 왼쪽 결과 점수 요약 & 오답노트 (lg:col-span-7) -->
+        <div class="lg:col-span-7 space-y-6">
+          <!-- 퀴즈 결과 점수 카드 -->
+          <div class="bg-white rounded-3xl p-6 md:p-8 shadow-premium border border-amber-100 relative overflow-hidden">
+            <!-- 화려한 축하 전구 효과 대칭 수놓기 -->
+            <div class="absolute -right-12 -top-12 w-40 h-40 bg-spanishGold/5 rounded-full blur-2xl"></div>
+            
+            <div class="text-center pb-6 border-b border-gray-100">
+              <span class="text-3xl" id="result-emoji">🎉</span>
+              <h2 class="font-display text-2xl font-bold text-gray-900 mt-2" id="result-greeting">¡Excelente! 대단합니다!</h2>
+              <p class="text-xs text-gray-500 mt-1 flex flex-wrap items-center justify-center gap-1">
+                <span id="result-nickname" class="font-bold text-spanishRed">도전자</span>님의 도전 성적표
+                <span id="result-partner-badge" class="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold">
+                  <span id="result-partner-emoji">💃</span>
+                  <span id="result-partner-title">플라멩코 댄서</span>
+                </span>
+              </p>
+            </div>
+
+            <!-- 대형 계기판 점수 노출 구역 -->
+            <div class="flex flex-col items-center justify-center py-6">
+              <div class="relative flex items-center justify-center w-32 h-32 rounded-full border-8 border-amber-50 bg-amber-50/20 shadow-inner">
+                <!-- 내부 원형 수치 -->
+                <div class="text-center">
+                  <span id="result-final-score" class="text-4xl md:text-5xl font-extrabold tracking-tight text-spanishRed">100</span>
+                  <span class="text-sm font-semibold text-gray-400"> / 100</span>
+                </div>
+              </div>
+              <p class="text-xs text-amber-800 font-semibold bg-amber-50 border border-amber-200 px-3.5 py-1.5 rounded-full mt-4 flex items-center gap-1.5">
+                🌟 맞춘 개수: <span id="result-correct-count" class="font-bold">10개</span> / 10문제
+              </p>
+            </div>
+
+            <!-- 핵심 행동 유도 재시작 단추 -->
+            <div class="pt-4 flex flex-col sm:flex-row items-center gap-3">
+              <button 
+                id="btn-restart" 
+                class="w-full py-3.5 bg-gradient-to-r from-spanishRed to-red-650 text-white rounded-xl font-bold text-sm tracking-wider shadow-premium transition-all duration-300 hover:scale-[1.02] hover:shadow-xl active:scale-[0.98] outline-none flex items-center justify-center gap-2"
+              >
+                새로운 퀴즈로 다시 도전하기
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 15.07M20 9.171V15m0 0h-5.829"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <!-- 틀린 문제 집중 오답노트 (Cuaderno de Errores) -->
+          <div class="bg-white rounded-3xl p-6 md:p-8 shadow-premium border border-amber-150">
+            <div class="flex items-center justify-between pb-4 border-b border-gray-100 mb-4">
+              <div class="flex items-center gap-2">
+                <span class="p-1.5 bg-red-50 text-spanishRed rounded-lg text-sm">📝</span>
+                <h3 class="font-display font-black text-lg text-gray-900">틀린 문제 복습 노트</h3>
+              </div>
+              <span id="wrong-count-badge" class="px-2.5 py-0.5 bg-red-100 text-spanishRed text-xs font-bold rounded-full">3건</span>
+            </div>
+
+            <!-- 집중 목록 카드 뷰 컴포넌트 -->
+            <div id="wrong-notebook-list" class="space-y-4 max-h-[360px] overflow-y-auto pr-1">
+              <!-- JS에서 동적으로 어휘를 바인딩함 -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 실시간 고정 랭킹 5위판 (lg:col-span-5) -->
+        <div class="lg:col-span-5 bg-stone-900 text-white rounded-3xl p-6 md:p-8 shadow-premium border-t-4 border-spanishGold h-full sticky top-6">
+          <div class="pb-4 border-b border-stone-800 mb-6 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+              <span class="text-xl">📊</span>
+              <div>
+                <h3 class="font-display font-medium text-amber-400 text-base">전체 명예의 전당</h3>
+                <p class="text-[9px] text-stone-500 uppercase tracking-widest">Live Scoreboard</p>
+              </div>
+            </div>
+            <span class="text-[10px] bg-stone-800 text-stone-300 border border-stone-750 px-2 py-0.5 rounded-full">정렬완료</span>
+          </div>
+
+          <div id="result-leaderboard-list" class="space-y-3 min-h-[180px]">
+            <!-- 게임 오버 시 기록이 추가된 대시보드를 즉시 새로고침 렌더 -->
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-stone-800/80 text-center text-xs text-stone-500">
+            실시간 퀴즈 데이터 저장 및 백업이 안전하게 완료되었습니다.
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- 하단 라이선스 및 크레딧 저작권 정보 푸터 -->
+    <footer class="w-full text-center py-6 text-sm text-gray-400 border-t border-gray-100 bg-white/20">
+      <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2.5 font-medium">
+        <span class="text-[11px] md:text-xs">스페인 단어 마스터 &copy; 2026. ¡Que tengas un buen viaje de aprendizaje!</span>
+        <div class="flex items-center gap-3 text-[11px]">
+          <span class="flex items-center gap-1 text-emerald-600"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-ping"></span> 웹 서비스 작동 정상</span>
+          <span class="text-gray-300">|</span>
+          <span class="hover:text-spanishRed cursor-pointer transition-colors duration-200">개인정보 보호기준 준수</span>
+        </div>
+      </div>
+    </footer>
+
+
+    <!-- ============================================== -->
+    <!-- 스페인어 단어 퀴즈 엔진 & 통신 자바스크립트 -->
+    <!-- ============================================== -->
+    <script>
+      // ==========================================
+      // [1] FIREBASE CONFIGURATION (사용자 설정 구역)
+      // ==========================================
+      // 상용 환경 배포 시, 본인의 Firebase 콘솔 설정과 호환되도록 붙여넣어 활성화가 가능하게 한 파트입니다.
+      // 팁: AI Studio에서 Firebase 데이터베이스를 자동으로 미리 설정한 경우, 아래 변수 대신 호환 플러그인이 로드됩니다.
+      const firebaseConfig = {
+        apiKey: "YOUR_API_KEY_HERE-PLACEHOLDER",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_SENDER_ID",
+        appId: "YOUR_APP_ID"
+      };
+
+      // ==========================================
+      // [2] 기초 내장 스페인어 어휘 및 문장 데이터베이스 (Study Materials)
+      // ==========================================
+      // 단어 학습과 문장 학습 기능을 모두 담은 대형 풍부한 에센스 바인더입니다.
+      // 퀴즈에도 해당 단어/문장 및 예문 해설 지표가 입체적으로 융합됩니다.
+      const defaultVocabulary = [
+        // --- [단어 학습 파트: 15개] ---
+        {
+          type: "word",
+          spanish: "hola",
+          korean: "안녕 / 안녕하세요",
+          exampleSpan: "¡Hola! ¿Cómo te llamas?",
+          exampleKor: "안녕! 네 이름은 무엇이니?",
+          explanation: "가장 기본이 되는 스페인어 인사입니다. 시간대에 관계없이 언제나 친근하게 사용할 수 있습니다."
+        },
+        {
+          type: "word",
+          spanish: "gracias",
+          korean: "감사합니다",
+          exampleSpan: "Muchas gracias por invitarme a cenar.",
+          exampleKor: "저녁 식사에 초대해 주셔서 정말 감사합니다.",
+          explanation: "상대방에게 감사함을 표현하는 일상 필수 단어입니다. 'Muchas'를 붙여 감사 수치를 높여볼 수 있습니다."
+        },
+        {
+          type: "word",
+          spanish: "adiós",
+          korean: "잘 가 / 안녕히 계세요",
+          exampleSpan: "Adiós, ¡que tengas un buen fin de semana!",
+          exampleKor: "잘 가, 좋은 주말 보내!",
+          explanation: "작별 인사를 뜻하며, 캐주얼한 일상과 격식 있는 상황 모두에서 널리 쓰입니다."
+        },
+        {
+          type: "word",
+          spanish: "amigo",
+          korean: "친구",
+          exampleSpan: "Él es mi mejor amigo de la escuela.",
+          exampleKor: "그는 내 가장 친한 학교 친구야.",
+          explanation: "친구를 의미하는 단어이며, 여성 친구는 'amiga', 복수형은 'amigos'로 어미 정렬이 적용됩니다."
+        },
+        {
+          type: "word",
+          spanish: "casa",
+          korean: "집",
+          exampleSpan: "Mi casa es muy acogedora y amplia.",
+          exampleKor: "나의 집은 매우 아늑하고 넓어.",
+          explanation: "'Mi casa es tu casa' (내 집이 네 집이다, 즉 편히 쉬라는 뜻)라는 유명한 스페인 속담이 있습니다."
+        },
+        {
+          type: "word",
+          spanish: "agua",
+          korean: "물",
+          exampleSpan: "Por favor, ¿me das un vaso de agua fría?",
+          exampleKor: "부탁인데, 찬 물 한 잔만 주시겠어요?",
+          explanation: "지중해의 열정을 이겨낼 수 있는 생명의 원천, 물을 의미합니다. 여성 명사이나 발음 때문에 'el agua' 단수를 씁니다."
+        },
+        {
+          type: "word",
+          spanish: "amor",
+          korean: "사랑",
+          exampleSpan: "El amor es el motor más fuerte del mundo.",
+          exampleKor: "사랑은 세상에서 가장 강력한 원동력이다.",
+          explanation: "불꽃 같은 사랑의 마음을 품은 스페인 사람들이 애정 깊게 애용하는 아름다운 어휘 중 하나입니다."
+        },
+        {
+          type: "word",
+          spanish: "libro",
+          korean: "책",
+          exampleSpan: "Estoy leyendo un libro de historia española.",
+          exampleKor: "나는 스페인 역사에 관한 책을 읽고 있어.",
+          explanation: "책을 뜻하며, 도서관은 'biblioteca', 서점은 'librería'라고 부릅니다."
+        },
+        {
+          type: "word",
+          spanish: "pan",
+          korean: "빵",
+          exampleSpan: "Compro pan tierno todas las mañanas.",
+          exampleKor: "나는 매일 아침 갓 구운 부드러운 빵을 사.",
+          explanation: "스페인의 주식 중 하나로, 아주 전통적이고 담백하게 발효한 바게트 식감을 자랑합니다."
+        },
+        {
+          type: "word",
+          spanish: "viaje",
+          korean: "여행",
+          exampleSpan: "¡Buen viaje a Barcelona!",
+          exampleKor: "바르셀로나로의 즐거운 여행 되세요!",
+          explanation: "새로운 곳을 찾는 활기참을 표현하는 여행이란 단어로, 인사말 '¡Buen viaje!'는 매우 인기가 많습니다."
+        },
+        {
+          type: "word",
+          spanish: "feliz",
+          korean: "행복한",
+          exampleSpan: "Hoy es un día feliz para toda la familia.",
+          exampleKor: "오늘은 온 가족에게 정말 행복한 날이야.",
+          explanation: "스페인의 환희와 기쁨을 가득 담은 단어로, 복수형은 'felices'로 변경 적용됩니다."
+        },
+        {
+          type: "word",
+          spanish: "bonito",
+          korean: "예쁜 / 아름다운",
+          exampleSpan: "Este pueblo costero es realmente bonito.",
+          exampleKor: "이 해안 마을은 정말 아름답다.",
+          explanation: "여성형은 'bonita'로 쓰이며, 풍경이나 인물, 물건 등 다방면에서 부드럽게 묘사하는 역할을 합니다."
+        },
+        {
+          type: "word",
+          spanish: "cielo",
+          korean: "하늘",
+          exampleSpan: "El cielo de Madrid es azul intenso.",
+          exampleKor: "마드리드의 하늘은 강렬한 푸른색이다.",
+          explanation: "물리적인 푸른 하늘을 뜻하기도 하지만, 사랑하는 연인이나 아이를 'Mi cielo' (내 사랑)라고 부르는 애칭이 됩니다."
+        },
+        {
+          type: "word",
+          spanish: "flor",
+          korean: "꽃",
+          exampleSpan: "Esta flor de clavel es el símbolo nacional.",
+          exampleKor: "이 카네이션 꽃은 국가적인 상징이야.",
+          explanation: "여성 명사 품격으로 단수 'la flor', 복수형 'las flores'로 변화가 일어납니다."
+        },
+        {
+          type: "word",
+          spanish: "familia",
+          korean: "가족",
+          exampleSpan: "La familia siempre se reúne durante las fiestas.",
+          exampleKor: "가족은 명절 동안 항상 한자리에 모인다.",
+          explanation: "스페인은 가족간의 유대 및 만찬 문화를 매우 무겁고도 따뜻하게 지키는 성향이 뚜렷합니다."
+        },
+
+        // --- [문장 학습 파트: 15개] ---
+        {
+          type: "sentence",
+          spanish: "¿Cómo estás?",
+          korean: "잘 지내? (어떻게 지내?)",
+          exampleSpan: "Hola, hace tiempo que no te veo. ¿Cómo estás?",
+          exampleKor: "안녕, 오랜만이야. 어떻게 지내?",
+          explanation: "상대방의 개인적인 기분이나 건강 안부를 묻는 핵심 스페인어 일상 표현입니다."
+        },
+        {
+          type: "sentence",
+          spanish: "Buenos días",
+          korean: "좋은 아침입니다",
+          exampleSpan: "Buenos días, ¿quiere tomar un café con leche?",
+          exampleKor: "좋은 아침입니다, 카페라떼 한 잔 하시겠습니까?",
+          explanation: "해 뜨는 아침부터 오후 1~2시경인 점심 식사 식욕 전에 격식과 예우를 담아 나누는 정중한 인사말입니다."
+        },
+        {
+          type: "sentence",
+          spanish: "Buenas tardes",
+          korean: "좋은 오후입니다",
+          exampleSpan: "Buenas tardes, ¿en qué puedo ayudarle hoy?",
+          exampleKor: "좋은 오후입니다, 오늘 손님을 어떻게 도와드릴까요?",
+          explanation: "오후 점심식사(보통 스페인은 2시경) 이후부터 완전히 해가 저물어 밤이 되기 전까지 예절 높게 건네는 인사입니다."
+        },
+        {
+          type: "sentence",
+          spanish: "Buenas noches",
+          korean: "좋은 밤 / 안녕히 주무세요",
+          exampleSpan: "Buenas noches, dulces sueños a todos.",
+          exampleKor: "좋은 밤입니다, 모두 단꿈 꾸며 잘 자요.",
+          explanation: "저녁 수면 전 또는 어두워진 야간에 나누는 공손한 스페인어 표준 작별 및 만남 인사입니다."
+        },
+        {
+          type: "sentence",
+          spanish: "Mucho gusto",
+          korean: "만나서 반갑습니다",
+          exampleSpan: "¡Hola! Soy Sofía. - Mucho gusto, soy Carlos.",
+          exampleKor: "안녕! 난 소피아야. - 만나서 반가워, 난 카를로스야.",
+          explanation: "처음 알게 된 상대에게 상호 호감과 존중을 친절하게 내비치는 멋진 첫인사 장식 단어군입니다."
+        },
+        {
+          type: "sentence",
+          spanish: "¿Cómo te llamas?",
+          korean: "이름이 무엇이니?",
+          exampleSpan: "Hola pequeño, ¿cómo te llamas?",
+          exampleKor: "안녕 꼬마야, 네 이름은 무엇이니?",
+          explanation: "'llamar'(부르다)의 재귀 대명사 활용으로, 직역하면 '너를 어떻게 표현하니?'가 됩니다."
+        },
+        {
+          type: "sentence",
+          spanish: "Muchos éxitos",
+          korean: "성공을 기원합니다",
+          exampleSpan: "Te deseo muchos éxitos en tu nuevo proyecto español.",
+          exampleKor: "네가 진행할 스페인식 새 프로젝트의 많은 성공을 바란다.",
+          explanation: "이직, 프로젝트 런칭, 또는 시험 등의 도전을 앞둔 친구에게 응원의 기를 전해줄 때 사용합니다."
+        },
+        {
+          type: "sentence",
+          spanish: "No entiendo",
+          korean: "이해하지 못하겠어요",
+          exampleSpan: "Lo siento, habla usted muy rápido. No entiendo.",
+          exampleKor: "죄송하지만 너무 빨리 말씀하시네요. 이해하지 못하겠어요.",
+          explanation: "언어 소통이 가로막힌 경우, 솔직하고 예우 있게 소통 장벽을 표시하고 천천히 이야기를 부탁하기 최고의 핵심 구입니다."
+        },
+        {
+          type: "sentence",
+          spanish: "¿Cuánto cuesta?",
+          korean: "이것은 얼마인가요?",
+          exampleSpan: "Disculpe, ¿cuánto cuesta esta bufanda roja?",
+          exampleKor: "실례지만 이 빨간 머플러 가격이 어떻게 되나요?",
+          explanation: "플라자 시장, 로컬 상점, 기념품 코너 등에서 가격을 확인하고 물어볼 때 최고의 필수 문장입니다."
+        },
+        {
+          type: "sentence",
+          spanish: "¿Dónde está el baño?",
+          korean: "화장실은 어디에 있습니까?",
+          exampleSpan: "Perdone la urgencia, ¿dónde está el baño de caballeros?",
+          exampleKor: "급한 마음에 실례합니다만, 신사용 화장실이 어디 방향인가요?",
+          explanation: "해외 스페인어권 국가 여행 중 절대적 생리 해결을 정중하고 깔끔하게 어필할 수 있는 골든 문장입니다."
+        },
+        {
+          type: "sentence",
+          spanish: "Buen provecho",
+          korean: "맛있게 드세요",
+          exampleSpan: "Aquí está su paella marinera. ¡Buen provecho!",
+          exampleKor: "주문하신 해산물 빠에야 나왔습니다. 맛있게 드세요!",
+          explanation: "식사 중인 누군가에게 건네는 우아한 기원 인사로 영어권의 'Bon Appétit'와 동일한 문화적 성격입니다."
+        },
+        {
+          type: "sentence",
+          spanish: "Hasta luego",
+          korean: "나중에 만나요",
+          exampleSpan: "La reunión de hoy terminó. ¡Hasta luego!",
+          exampleKor: "오늘 미팅은 이것으로 끝났어요. 다음에 봬요!",
+          explanation: "스페인의 상냥한 작별 인사이자 일주일, 혹은 짧은 몇 분 후의 만남을 아우르는 캐주얼 대표 구입니다."
+        },
+        {
+          type: "sentence",
+          spanish: "¡Que te mejores!",
+          korean: "얼른 쾌차하기 바란다!",
+          exampleSpan: "Sé que estás resfriado. ¡Que te mejores pronto!",
+          exampleKor: "감기 걸렸다는 얘기 들었어. 꼭 빨리 나아!",
+          explanation: "몸에 피로나 병색을 앓고 있는 가까운 도전자나 동료에게 보내는 스페인 사람들의 다정한 위로 격식입니다."
+        },
+        {
+          type: "sentence",
+          spanish: "¿Me puede ayudar?",
+          korean: "저를 도와주실 수 있으신가요?",
+          exampleSpan: "Estoy un poco perdido. ¿Me puede ayudar, por favor?",
+          exampleKor: "길을 좀 헤매고 있습니다. 혹시 도와줄 수 있을까요?",
+          explanation: "난감한 상황에서 현지인에게 구원의 손길을 조심스럽고 깔끔한 스페인 예법으로 상용하게 청원하는 표현입니다."
+        },
+        {
+          type: "sentence",
+          spanish: "Feliz cumpleaños",
+          korean: "생일 축하해요",
+          exampleSpan: "¡Feliz cumpleaños, mi querido amigo!",
+          exampleKor: "생일 축하해, 내가 아끼는 내 소중한 친구야!",
+          explanation: "해마다 뜻깊게 찾아오는 생일의 환희를 우주적으로 한껏 축하하기 적합한 표준 격식 문장입니다."
+        }
+      ];
+
+       // ==========================================
+      // [3] 시스템 핵심 정보 전역 관리 상태(States)
+      // ==========================================
+      let db = null;                        // Firestore 컬렉션 인스턴스 전역 관리 포인터
+      let isFirebaseConnected = false;      // 실시간 클라우드 파이어베이스 탑재 성공 표시 유무
+      let loadedVocabulary = [];            // 연동 후 최종 적재 확보된 스페인어 보카 리스트
+      let currentQuizList = [];             // 10문제의 문제 묶음 컨테이너 캐시
+      let currentQuestionIdx = 0;           // 현재 순서 포인터 (0~9)
+      let score = 0;                        // 플레이어 총합 점수판 기록 (문제당 10점)
+      let playerNickname = "";              // 사용자 식별 플레이어명
+      let userQuizResponses = [];            // 사용자가 선택한 정/오답 오답노트 보관고 데이터 구조
+
+      // 계단형 학습 및 RPG 레벨 시스템 변수 추가
+      let currentStage = 1;                 // 1 ~ 10 스테이지 진행
+      let playerLevel = 1;                  // 1 ~ 5 레벨 진행
+      let playerXp = 0;                     // 누적 경험치(XP)
+      
+      // 복습 시험 정보 관리 상태
+      let isExamMode = false;               // 현재 중간/기말 복습고사 치르는 중인지 식별 플래그
+      let currentExamQuizList = [];         // 시험 문제 묶음
+      let currentExamIdx = 0;               // 시험 문제 진행 포인터
+      let examScore = 0;                    // 현재 시험 정답 점수 (5문제 출제, 맞춤*20점)
+      let examWrongResponses = [];          // 시험 동안 틀린 문항 저장소
+      let examType = "mid";                 // "mid"(Stage 5 도달 시) 또는 "final"(Stage 10 도달 시)
+
+      const levelData = [
+        { level: 1, title: "Level 1 Beginner", minXp: 0, maxXp: 100 },
+        { level: 2, title: "Level 2 Traveler", minXp: 101, maxXp: 250 },
+        { level: 3, title: "Level 3 Explorer", minXp: 251, maxXp: 450 },
+        { level: 4, title: "Level 4 Conversational", minXp: 451, maxXp: 700 },
+        { level: 5, title: "Level 5 Spanish Master", minXp: 701, maxXp: Infinity }
+      ];
+
+      // 캐릭터 리스트 정의
+      const characters = [
+        { emoji: "💃", title: "플라멩코 댄서" },
+        { emoji: "🐂", title: "투우사" },
+        { emoji: "⚽", title: "축구선수" },
+        { emoji: "👑", title: "스페인 왕실 근위병" },
+        { emoji: "🎸", title: "기타리스트" },
+        { emoji: "🏰", title: "가우디 건축가" }
+      ];
+      let selectedCharacter = null;         // 추첨된 아바타 캐릭터 객체 ({ emoji, title })
+
+      // 화면 요소(Screens) 참조 핸들러 바인딩 캐시
+      const screenLoading = document.getElementById("screen-loading");
+      const screenStart = document.getElementById("screen-start");
+      const screenQuiz = document.getElementById("screen-quiz");
+      const screenExam = document.getElementById("screen-exam");
+      const screenResult = document.getElementById("screen-result");
+
+      // ==========================================
+      // [4] 부트스트랩(Initialization) 및 서버 확인
+      // ==========================================
+      window.addEventListener("DOMContentLoaded", async () => {
+        // 입력 글자 카운터 이벤트 선제 연결
+        const inputNickname = document.getElementById("input-nickname");
+        const charCounter = document.getElementById("char-counter");
+        inputNickname.addEventListener("input", () => {
+          charCounter.textContent = `${inputNickname.value.length}/12자`;
+          updateStartButtonState(); // 글자 제한 충족 판단에 따라 시작 단추 상태 갱신
+        });
+
+        // 랜덤 캐릭터 뽑기 버튼 이벤트 바인딩
+        document.getElementById("btn-draw-char").addEventListener("click", handleDrawCharacter);
+
+        // 탭 네비게이션 활성화
+        initTabNavigation();
+
+        // 퀴즈 엔진 초기화 실행
+        await initQuizSystem();
+      });
+
+      // 탭 전환 메커니즘 전역 바인딩
+      function initTabNavigation() {
+        const btnTabGame = document.getElementById("btn-tab-game");
+        const btnTabLearn = document.getElementById("btn-tab-learn");
+        const panelTabGame = document.getElementById("panel-tab-game");
+        const panelTabLearn = document.getElementById("panel-tab-learn");
+
+        const btnLearnWords = document.getElementById("btn-learn-words");
+        const btnLearnSentences = document.getElementById("btn-learn-sentences");
+
+        // 기본 활성 학습 종류 세팅
+        let activeLearnType = "word";
+
+        btnTabGame.addEventListener("click", () => {
+          btnTabGame.className = "flex-1 pb-3 text-center border-b-2 border-spanishRed text-spanishRed font-bold text-xs md:text-sm tracking-wider transition-all duration-300 flex items-center justify-center gap-2 outline-none cursor-pointer";
+          btnTabLearn.className = "flex-1 pb-3 text-center border-b-2 border-transparent text-gray-400 font-semibold text-xs md:text-sm tracking-wider hover:text-gray-700 transition-all duration-300 flex items-center justify-center gap-2 outline-none cursor-pointer";
+          
+          panelTabGame.classList.remove("hidden");
+          panelTabLearn.classList.add("hidden");
+        });
+
+        btnTabLearn.addEventListener("click", () => {
+          btnTabLearn.className = "flex-1 pb-3 text-center border-b-2 border-spanishRed text-spanishRed font-bold text-xs md:text-sm tracking-wider transition-all duration-300 flex items-center justify-center gap-2 outline-none cursor-pointer";
+          btnTabGame.className = "flex-1 pb-3 text-center border-b-2 border-transparent text-gray-400 font-semibold text-xs md:text-sm tracking-wider hover:text-gray-700 transition-all duration-300 flex items-center justify-center gap-2 outline-none cursor-pointer";
+          
+          panelTabGame.classList.add("hidden");
+          panelTabLearn.classList.remove("hidden");
+
+          renderStudyLibrary(activeLearnType);
+        });
+
+        btnLearnWords.addEventListener("click", () => {
+          activeLearnType = "word";
+          btnLearnWords.className = "flex-1 py-1.5 md:py-2 text-xs font-bold bg-white text-stone-950 rounded-lg shadow-sm border border-stone-200/50 tracking-wider transition-all duration-200 outline-none cursor-pointer";
+          btnLearnSentences.className = "flex-1 py-1.5 md:py-2 text-xs font-semibold text-stone-500 rounded-lg tracking-wider hover:text-stone-700 transition-all duration-200 outline-none cursor-pointer";
+          renderStudyLibrary("word");
+        });
+
+        btnLearnSentences.addEventListener("click", () => {
+          activeLearnType = "sentence";
+          btnLearnSentences.className = "flex-1 py-1.5 md:py-2 text-xs font-bold bg-white text-stone-950 rounded-lg shadow-sm border border-stone-200/50 tracking-wider transition-all duration-200 outline-none cursor-pointer";
+          btnLearnWords.className = "flex-1 py-1.5 md:py-2 text-xs font-semibold text-stone-500 rounded-lg tracking-wider hover:text-stone-700 transition-all duration-200 outline-none cursor-pointer";
+          renderStudyLibrary("sentence");
+        });
+      }
+
+      /**
+       * 학습 라이브러리 목록을 동적으로 빌드하고 렌더링합니다.
+       * 아코디언 형식을 지원하여 클릭 시 상세 예문과 한국해석, 해설이 슬라이드 노출됩니다.
+       */
+      function renderStudyLibrary(type) {
+        const container = document.getElementById("learn-list-container");
+        container.innerHTML = "";
+
+        // loadedVocabulary 에서 지정된 type과 매치되는 항목 필터링
+        const items = loadedVocabulary.filter(item => item.type === type);
+
+        if (items.length === 0) {
+          container.innerHTML = `
+            <div class="py-12 text-center text-stone-400 text-xs">
+              가져올 학습 데이터가 없습니다. 서버 상태를 다시 확인해 주세요.
+            </div>
+          `;
+          return;
+        }
+
+        items.forEach((item, idx) => {
+          const cardId = `learn-card-${type}-${idx}`;
+          const detailId = `learn-detail-${type}-${idx}`;
+          const arrowId = `learn-arrow-${type}-${idx}`;
+
+          const card = document.createElement("div");
+          card.className = "bg-stone-50 hover:bg-stone-100/70 border border-stone-200/60 rounded-xl transition-all duration-200 overflow-hidden";
+          card.innerHTML = `
+            <!-- 아코디언 헤더 -->
+            <button 
+              id="${cardId}"
+              type="button"
+              class="w-full text-left px-4 py-3 pb-3 md:py-3.5 flex items-center justify-between outline-none cursor-pointer group"
+            >
+              <div class="flex items-center gap-3">
+                <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-800 text-[11px] font-mono font-black flex items-center justify-center">
+                  ${idx + 1}
+                </span>
+                <div>
+                  <h4 class="font-display font-bold text-sm text-stone-900 group-hover:text-spanishRed transition-colors duration-150">${item.spanish}</h4>
+                  <p class="text-[10px] text-stone-500 font-medium">${item.korean}</p>
+                </div>
+              </div>
+              <span id="${arrowId}" class="text-sm text-stone-400 transition-transform duration-300 transform">▼</span>
+            </button>
+
+            <!-- 아코디언 상세 보기 영역 (기본 숨김) -->
+            <div id="${detailId}" class="hidden px-4 pb-4 pt-1.5 border-t border-dashed border-stone-200 bg-white space-y-3.5 text-xs fade-in">
+              <!-- 뜻/해석 -->
+              <div class="space-y-1">
+                <span class="inline-block px-2 py-0.5 rounded bg-amber-50 text-amber-800 text-[9px] font-bold uppercase tracking-wider">Significado (뜻)</span>
+                <p class="text-stone-900 font-bold ml-1 text-xs">${item.korean}</p>
+              </div>
+
+              <!-- 대표 예문 -->
+              <div class="space-y-1">
+                <span class="inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-800 text-[9px] font-bold uppercase tracking-wider">Ejemplo (예문)</span>
+                <div class="ml-1 pl-2 border-l-2 border-blue-200 space-y-0.5">
+                  <p class="text-stone-900 font-semibold italic text-xs font-serif leading-relaxed">${item.exampleSpan}</p>
+                  <p class="text-stone-500 text-[11px] font-medium leading-relaxed">${item.exampleKor}</p>
+                </div>
+              </div>
+
+              <!-- 깊이 있는 해설 -->
+              <div class="space-y-1 pt-1 border-t border-stone-100/50 text-[11px] leading-relaxed">
+                <span class="text-stone-400 font-bold">💡 알아보기 :</span>
+                <p class="text-stone-600 block pl-1 font-medium mt-0.5">${item.explanation}</p>
+              </div>
+            </div>
+          `;
+
+          container.appendChild(card);
+
+          // 클릭 핸들러 토글 스왑 등록
+          const btnHeader = card.querySelector(`#${cardId}`);
+          btnHeader.addEventListener("click", () => {
+            const detailPanel = card.querySelector(`#${detailId}`);
+            const arrowIcon = card.querySelector(`#${arrowId}`);
+
+            const isCollapsed = detailPanel.classList.contains("hidden");
+
+            if (isCollapsed) {
+              detailPanel.classList.remove("hidden");
+              arrowIcon.className = "text-sm text-spanishRed transition-transform duration-300 transform rotate-180";
+              card.className = "bg-white border-2 border-amber-300 rounded-xl shadow-md transition-all duration-200 overflow-hidden";
+            } else {
+              detailPanel.classList.add("hidden");
+              arrowIcon.className = "text-sm text-stone-400 transition-transform duration-300 transform";
+              card.className = "bg-stone-50 hover:bg-stone-100/70 border border-stone-200/60 rounded-xl transition-all duration-200 overflow-hidden";
+            }
+          });
+        });
+      }
+
+      /**
+       * 시스템 상태를 평가하고 Firebase 및 기본 데이터 자원을 연결합니다.
+       */
+      async function initQuizSystem() {
+        // Firebase 설정 유효성 검사 (사용자가 실질적 자격 증명을 가두었는지 검출)
+        const isVerifiedConfig = firebaseConfig && 
+                                 firebaseConfig.apiKey && 
+                                 firebaseConfig.apiKey !== "YOUR_API_KEY_HERE-PLACEHOLDER" && 
+                                 !firebaseConfig.apiKey.includes("YOUR_");
+
+        if (isVerifiedConfig) {
+          try {
+            // Firebase Compat SDK를 명시한 조건에 부합하게 수동 초기화
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            isFirebaseConnected = true;
+            console.log("Firebase Firestore가 성공적으로 활성화 장착되었습니다.");
+          } catch(err) {
+            console.warn("오류: 로컬 환경에서 사용 불가 처리되어 오프라인 모드로 자동 안전 이륙합니다.", err);
+            isFirebaseConnected = false;
+          }
+        } else {
+          console.log("힌트: Firebase 설정값이 빈 템플릿 코드이므로 오프라인 데모(LocalStorage) 체제로 자동 전환 수행.");
+          isFirebaseConnected = false;
+        }
+
+        // 서비스 마크업 상태 동적 처리
+        const badgeMode = document.getElementById("badge-mode");
+        if (isFirebaseConnected) {
+          badgeMode.innerHTML = `
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-ping"></span>
+            파이어베이스 DB 실시간 고성능 연결
+          `;
+          badgeMode.className = "px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full text-xs font-semibold border border-emerald-200 inline-flex items-center gap-1.5";
+        } else {
+          badgeMode.innerHTML = `
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>
+            기본 로컬 저장소 모드 (로컬 랭킹 제공)
+          `;
+          badgeMode.className = "px-3 py-1 bg-amber-50 text-amber-800 rounded-full text-xs font-semibold border border-amber-200 inline-flex items-center gap-1.5";
+        }
+
+        try {
+          // 1. 단어 데이터 소스 확보 (Firestore 우선 시드, 불가능 시 로컬)
+          await setupVocabularyDatabase();
+          
+          // 2. 현재 전광판 랭킹 테이블 채우기
+          await refreshLeaderboard();
+          
+          // 3. 로컬 저장 단 기반 플레이어 프로필 복원 및 HUD 반영
+          loadPlayerProfileLocally();
+
+          // 4. 로딩 화면 완료 후 메인 시작 화면으로 안내
+          transitionScreen(screenLoading, screenStart);
+        } catch (error) {
+          console.error("데이터셋 로드 복원에 전면 실패하였습니다. 로컬 자원이 전원 투입됩니다.", error);
+          loadedVocabulary = [...defaultVocabulary];
+          await refreshLeaderboard();
+          loadPlayerProfileLocally();
+          transitionScreen(screenLoading, screenStart);
+        }
+
+        // 시작 단추 핸들러 위임 등록
+        document.getElementById("btn-start").addEventListener("click", handleStartQuizGame);
+        // 사전학습 완료 후 퀴즈 시작 버튼 등록
+        document.getElementById("btn-confirm-study").addEventListener("click", handleStartStageQuiz);
+        // 다음 문제 버튼 등록 (계단형 퀴즈 진행 흐름 매핑)
+        document.getElementById("btn-next-question").addEventListener("click", handleNextStageQuestionFlow);
+        // 시험 내부 시작(Comenzar Examen) 버튼 등록
+        document.getElementById("btn-start-exam-play").addEventListener("click", handleStartExamPlay);
+        // 시험 다음 문제 단추 등록
+        document.getElementById("btn-exam-next").addEventListener("click", handleExamNextFlow);
+        // 다시 시작 버튼 등록
+        document.getElementById("btn-restart").addEventListener("click", handleResetGameFlow);
+      }
+
+      /**
+       * Firestore에 등록된 단어 데이터가 존재하는지 진단하고 자동으로 시딩(배치 삽입)합니다.
+       * 오프라인인 경우 기부된 정적 사전배열을 원본으로 취급합니다.
+       */
+      async function setupVocabularyDatabase() {
+        if (!isFirebaseConnected) {
+          loadedVocabulary = [...defaultVocabulary];
+          console.log("로컬 어휘집 활성화 완료:", loadedVocabulary.length);
+          return;
+        }
+
+        try {
+          // 데이터가 구축되었는지 1순위 타겟 읽기 검수 시도
+          const docSnapshot = await db.collection("words").limit(1).get()
+            .catch(error => handleFirestoreDiagnosticError(error, "get", "words"));
+          
+          if (docSnapshot.empty) {
+            console.log("Firestore 'words' 컬렉션이 비어있습니다. 초기 정밀 단어 생성을 가동합니다...");
+            
+            const batch = db.batch();
+            defaultVocabulary.forEach((item) => {
+              // 특수 문자를 정제하여 고유 ID 키 배치
+              const cleanId = item.spanish.toLowerCase().replace(/[^a-z0-9]/g, "_");
+              const docRef = db.collection("words").doc(cleanId);
+              // Firestore 규칙(isValidWord)이 오직 'spanish', 'korean'만 허용하므로 규칙 준수를 위해 필터링 저장
+              batch.set(docRef, {
+                spanish: item.spanish,
+                korean: item.korean
+              });
+            });
+            await batch.commit();
+            console.log("Firestore 30대 기본 어휘 리스트 이식 배치 처리를 완료하였습니다.");
+          }
+
+          // 구축된 데이터 전원 긁어오기
+          const allDocs = await db.collection("words").get()
+            .catch(error => handleFirestoreDiagnosticError(error, "get", "words"));
+          
+          const rawVocabulary = [];
+          allDocs.forEach(doc => {
+            rawVocabulary.push(doc.data());
+          });
+
+          // 로컬 내장 고사양 데이터에서 예문, 번역, 해설 동적 바인딩 보강
+          loadedVocabulary = rawVocabulary.map(raw => {
+            const matchedLocal = defaultVocabulary.find(v => v.spanish.toLowerCase().trim() === raw.spanish.toLowerCase().trim());
+            return {
+              type: raw.type || (matchedLocal ? matchedLocal.type : "word"),
+              spanish: raw.spanish,
+              korean: raw.korean,
+              exampleSpan: matchedLocal ? matchedLocal.exampleSpan : "No hay ejemplo disponible.",
+              exampleKor: matchedLocal ? matchedLocal.exampleKor : "제공되는 예문이 없습니다.",
+              explanation: matchedLocal ? matchedLocal.explanation : "이 기초 품목에 대해 자세히 알아봅시다!"
+            };
+          });
+          
+          console.log("Firestore 기준 실시간 어휘 확보 및 로컬 상세정보 병합 보강 완료:", loadedVocabulary.length);
+        } catch(err) {
+          console.warn("단어 Seeding/Enrichment 중 에러 발생, 메모리 대체 구동:", err);
+          loadedVocabulary = [...defaultVocabulary];
+        }
+      }
+
+      // ==========================================
+      // [5] 랭킹 명예의 전당 정보 처리 동적 바인딩
+      // ==========================================
+      /**
+       * 전체 랭킹 상위 5명을 정렬 기준에 맞추어 표시합니다.
+       * 로컬 모드일 시 localStorage에서 데이터를 가공합니다.
+       */
+      async function refreshLeaderboard() {
+        const boards = [
+          document.getElementById("leaderboard-container"),
+          document.getElementById("result-leaderboard-list")
+        ];
+
+        // 껍데기 로딩 노출 유도
+        boards.forEach(b => {
+          if (b) {
+            b.innerHTML = `
+              <div class="flex flex-col items-center justify-center py-10 space-y-2">
+                <div class="w-6 h-6 border-2 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                <p class="text-xs text-stone-400">명예의 전당 동기화 중...</p>
+              </div>
+            `;
+          }
+        });
+
+        let leaderboardData = [];
+
+        if (isFirebaseConnected) {
+          try {
+            // 점수 내림차순(desc), 최신 갱신 순 내림차순(desc) 정밀 복합 순위 검수
+            const querySnapshot = await db.collection("scores")
+              .orderBy("score", "desc")
+              .orderBy("timestamp", "desc")
+              .limit(5)
+              .get()
+              .catch(error => handleFirestoreDiagnosticError(error, "get", "scores"));
+            
+            querySnapshot.forEach(doc => {
+              const data = doc.data();
+              leaderboardData.push({
+                nickname: data.nickname,
+                character: data.character,
+                score: data.score,
+                level: data.level || 1,
+                xp: data.xp || 0,
+                timestamp: data.timestamp ? data.timestamp.toDate() : new Date()
+              });
+            });
+          } catch (err) {
+            console.warn("Firebase 랭킹 동적 쿼리 예외, 로컬 스토리지 데이터 우회 로딩 진행.", err);
+            leaderboardData = loadLocalFallbackLeaderboard();
+          }
+        } else {
+          leaderboardData = loadLocalFallbackLeaderboard();
+        }
+
+        // 실 출력 가공 렌더링 시작
+        boards.forEach(container => {
+          if (!container) return;
+          container.innerHTML = ""; // 클리어
+
+          if (leaderboardData.length === 0) {
+            container.innerHTML = `
+              <div class="flex flex-col items-center justify-center text-center py-12 px-4 border border-dashed border-stone-800 rounded-2xl bg-stone-900/40">
+                <span class="text-3xl mb-2.5">🏝️</span>
+                <p class="text-sm font-semibold text-stone-300">아직 등록된 점수가 없습니다.</p>
+                <p class="text-[10px] text-stone-500 mt-1 max-w-[150px]">귀하가 영광스러운 첫 도전자이자 1위 점수 등록자가 되어보세요!</p>
+              </div>
+            `;
+            return;
+          }
+
+          leaderboardData.forEach((record, index) => {
+            // 순위 등극 메달 색상 분기 처리
+            let medalBadge = "";
+            let accentRowStyle = "bg-stone-850/40 border-stone-850";
+            
+            if (index === 0) {
+              medalBadge = `<span class="w-6 h-6 bg-amber-400 text-stone-950 font-bold text-xs rounded-full flex items-center justify-center shadow-md flex-shrink-0">1</span>`;
+              accentRowStyle = "bg-gradient-to-r from-amber-900/25 to-stone-900 border border-amber-500/30 ring-1 ring-amber-500/10";
+            } else if (index === 1) {
+              medalBadge = `<span class="w-6 h-6 bg-stone-300 text-stone-950 font-bold text-xs rounded-full flex items-center justify-center shadow-md flex-shrink-0">2</span>`;
+              accentRowStyle = "bg-stone-800/60 border-stone-700/50";
+            } else if (index === 2) {
+              medalBadge = `<span class="w-6 h-6 bg-amber-700 text-white font-bold text-xs rounded-full flex items-center justify-center shadow-md flex-shrink-0">3</span>`;
+              accentRowStyle = "bg-stone-800/40 border-stone-800/55";
+            } else {
+              medalBadge = `<span class="w-6 h-6 bg-stone-850 text-stone-400 font-bold font-mono text-[10px] rounded-full flex items-center justify-center border border-stone-800 flex-shrink-0">${index + 1}</span>`;
+              accentRowStyle = "bg-stone-900/20 border-stone-850";
+            }
+
+            // 캐릭터 이름 및 이모지 분해 파싱
+            const charStr = record.character || "💃 플라멩코 댄서";
+            const charEmoji = charStr.split(" ")[0] || "💃";
+            const charTitle = charStr.split(" ").slice(1).join(" ") || "플라멩코 댄서";
+
+            // 날짜 가공 포맷
+            const dateStr = formatDate(record.timestamp);
+
+            const row = document.createElement("div");
+            row.className = `flex items-center justify-between p-3 rounded-xl border ${accentRowStyle} transition-all duration-300 hover:translate-x-1`;
+            row.innerHTML = `
+              <div class="flex items-center gap-2.5 min-w-0">
+                ${medalBadge}
+                <!-- 캐릭터 원형 프로필 아바타 -->
+                <div class="w-9 h-9 rounded-full bg-stone-800 border border-stone-750 flex items-center justify-center text-lg shadow-inner flex-shrink-0 select-none pb-0.5" title="${sanitizeHTML(charTitle)}">
+                  ${charEmoji}
+                </div>
+                <div class="min-w-0">
+                  <h4 class="font-bold text-sm tracking-wide text-white flex items-center gap-1.5 flex-wrap truncate">
+                    ${sanitizeHTML(record.nickname)}
+                    <span class="text-[9px] bg-amber-500/15 text-spanishGold border border-amber-500/30 px-1 py-0.2 rounded font-mono font-bold">Lv.${record.level || 1}</span>
+                    ${index === 0 ? '<span class="text-[9px] bg-amber-400/15 text-amber-300 border border-amber-400/40 px-1 py-0.2 rounded font-normal uppercase">Campeón</span>' : ''}
+                  </h4>
+                  <div class="flex items-center gap-1.5 text-[10px] text-stone-400 mt-0.5">
+                    <span class="font-semibold text-spanishGold/95">${sanitizeHTML(charTitle)}</span>
+                    <span class="text-stone-700 font-bold">•</span>
+                    <span class="truncate">${dateStr}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="text-right flex-shrink-0 ml-2">
+                <span class="text-base font-extrabold ${index === 0 ? 'text-spanishGold' : 'text-stone-100'} font-mono">${record.score}</span>
+                <span class="text-[10px] font-semibold text-stone-500">점</span>
+              </div>
+            `;
+            container.appendChild(row);
+          });
+        });
+      }
+
+      // ==========================================
+      // [6] 게임 플레이 로직 흐름 (Main Core)
+      // ==========================================
+      /**
+       * 도전자 닉네임을 유효성 판단 후, 퀴즈 준비로 연계 이행합니다.
+       */
+      async function handleStartQuizGame() {
+        const inputNickname = document.getElementById("input-nickname");
+        const rawNickname = inputNickname.value.trim();
+
+        if (rawNickname.length < 2 || rawNickname.length > 12) {
+          alert("도전자 닉네임은 최소 2자에서 12자 이내로 설정할 수 있습니다.");
+          inputNickname.focus();
+          // 시각적 피드백 오류 강조 연출
+          const parentForm = inputNickname.closest(".bg-gradient-to-br") || inputNickname.closest(".bg-gradient-to-r") || inputNickname;
+          parentForm.classList.add("wiggle");
+          setTimeout(() => parentForm.classList.remove("wiggle"), 500);
+          return;
+        }
+
+        if (!selectedCharacter) {
+          alert("스페어어 퀴즈 동반자가 되어줄 랜덤 파트너 캐릭터를 먼저 뽑아주세요!");
+          return;
+        }
+
+        playerNickname = rawNickname;
+        
+        // 1. 단어 데이터셋에서 랜덤으로 10문제를 엄선 준비
+        buildRandomQuizList();
+
+        // 2. 단말의 진행 어휘 카운터 세팅 리셋
+        currentQuestionIdx = 0;
+        score = 0;
+        userQuizResponses = [];
+
+        // 3. 첫 문제 문항 뷰 렌더
+        renderQuestion(currentQuestionIdx);
+
+        // 4. 스크린 전환 진행
+        transitionScreen(screenStart, screenQuiz);
+      }
+
+      /**
+       * 확보된 전체 단어 은행에서 무작위로 추려서 10문제의 랜덤 보카드와 오답 보기를 배치합니다.
+       * 단어 문제와 문장 문제의 혼합형 문제이며, 무작위로 한글->스페인어 또는 스페인어->한글 양방향 학습 퀴즈를 출제합니다.
+       */
+      function buildRandomQuizList() {
+        // 단어/문장 섞여 있는 원본 셔플 사본 작성
+        const shuffledList = [...loadedVocabulary].sort(() => 0.5 - Math.random());
+        // 10문제 발탁
+        const pickedItems = shuffledList.slice(0, 10);
+        
+        currentQuizList = pickedItems.map((item) => {
+          // 출제 방향 결정 (50% 확률로 스페인어->한글 또는 한글->스페인어)
+          const direction = Math.random() < 0.5 ? "span_to_kor" : "kor_to_span";
+          
+          let questionText = "";
+          let correctAnswer = "";
+          let wrongOptions = [];
+          
+          // 같은 타입(word/sentence)의 다른 카드 수배로 선지 정합성 가치 제고
+          const sameTypeVocabulary = loadedVocabulary.filter(v => v.type === item.type);
+          
+          if (direction === "span_to_kor") {
+            questionText = item.spanish;
+            correctAnswer = item.korean;
+            
+            // 동일 타입의 다른 한글 뜻 오답 선택
+            const otherMeanings = sameTypeVocabulary
+              .filter(v => v.korean !== item.korean)
+              .map(v => v.korean);
+            
+            wrongOptions = otherMeanings.sort(() => 0.5 - Math.random()).slice(0, 3);
+            
+            // 동일 풀이 빈약할 때의 Fallback 3개 확보
+            if (wrongOptions.length < 3) {
+              const anyOtherMeanings = loadedVocabulary
+                .filter(v => v.korean !== item.korean)
+                .map(v => v.korean);
+              wrongOptions = anyOtherMeanings.sort(() => 0.5 - Math.random()).slice(0, 3);
+            }
+          } else {
+            questionText = item.korean;
+            correctAnswer = item.spanish;
+            
+            // 동일 타입의 다른 스페인어 원어 오답 선택
+            const otherSpans = sameTypeVocabulary
+              .filter(v => v.spanish !== item.spanish)
+              .map(v => v.spanish);
+            
+            wrongOptions = otherSpans.sort(() => 0.5 - Math.random()).slice(0, 3);
+            
+            if (wrongOptions.length < 3) {
+              const anyOtherSpans = loadedVocabulary
+                .filter(v => v.spanish !== item.spanish)
+                .map(v => v.spanish);
+              wrongOptions = anyOtherSpans.sort(() => 0.5 - Math.random()).slice(0, 3);
+            }
+          }
+          
+          // 실 정답 1개 병합한 4개 배열 준비 후 무작위 재정립
+          const optionsPool = [correctAnswer, ...wrongOptions].sort(() => 0.5 - Math.random());
+          
+          return {
+            originalItem: item, // 해설 및 복습 카드 상세 융합 바인더 연동
+            type: item.type,    // "word" or "sentence"
+            direction: direction,
+            question: questionText,
+            answer: correctAnswer,
+            options: optionsPool
+          };
+        });
+      }
+
+      /**
+       * 특정 인덱스의 문제를 인터페이스에 화려하게 기입 렌더링합니다.
+       */
+      function renderQuestion(index) {
+        if (index >= currentQuizList.length) return;
+        const currentData = currentQuizList[index];
+
+        // 상단 가시적 상태바 바인딩 진행
+        document.getElementById("quiz-live-score").textContent = `${score}점`;
+        if (selectedCharacter) {
+          document.getElementById("quiz-partner-emoji").textContent = selectedCharacter.emoji;
+          document.getElementById("quiz-partner-title").textContent = selectedCharacter.title;
+        }
+        document.getElementById("quiz-progress-num").textContent = `${index + 1} / 10`;
+        
+        const pct = Math.round(((index + 1) / 10) * 100);
+        document.getElementById("quiz-percentage").textContent = `${pct}%`;
+        document.getElementById("quiz-progress-bar").style.width = `${pct}%`;
+
+        // 문제 종류 및 출제 방향 뱃지 갱신
+        const typeBadge = document.getElementById("quiz-question-type-badge");
+        const typeLabel = currentData.type === "word" ? "단어 문제 (Palabra)" : "문장 문제 (Frase)";
+        typeBadge.textContent = typeLabel;
+        
+        if (currentData.type === "word") {
+          typeBadge.className = "text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full uppercase tracking-widest inline-block mb-3";
+        } else {
+          typeBadge.className = "text-[11px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full uppercase tracking-widest inline-block mb-3";
+        }
+
+        // 방향별 직관적 가이드 지표 텍스트 제어
+        const guideText = document.getElementById("quiz-question-guide");
+        if (currentData.direction === "span_to_kor") {
+          guideText.textContent = "가장 올바른 한국어 번역 뜻을 아래 보기 중에서 선출하세요.";
+        } else {
+          guideText.textContent = "한글 문장에 걸맞은 가장 정확한 스페인어 단어/문장을 선택하세요.";
+        }
+
+        // 메인 해당 어휘 노출
+        document.getElementById("quiz-question-word").textContent = currentData.question;
+
+        // 4지선다 버튼 슬롯 비우기
+        const optionsGroup = document.getElementById("quiz-options-group");
+        optionsGroup.innerHTML = "";
+
+        // 하단 복습 분석 피드백 박스 디폴트 폐쇄
+        const feedbackBox = document.getElementById("quiz-feedback-box");
+        feedbackBox.classList.add("invisible");
+        feedbackBox.className = "mt-6 p-4 rounded-2xl invisible flex items-start gap-3 border transition-all duration-300";
+
+        // 다음 문제 버튼 비활성 대기 사양 복구
+        const btnNext = document.getElementById("btn-next-question");
+        btnNext.disabled = true;
+        btnNext.innerHTML = `
+          <span id="btn-next-text">정답을 선택해주세요</span>
+          <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        `;
+
+        // 선지 구성 생성 바인딩
+        currentData.options.forEach((optText, oIdx) => {
+          const charSymbol = ["A", "B", "C", "D"][oIdx];
+          
+          const optBtn = document.createElement("button");
+          optBtn.className = "option-btn w-full text-left p-4 rounded-2xl border-2 border-stone-100 hover:border-amber-300 hover:bg-amber-50/20 bg-white transition-all duration-300 outline-none flex items-center justify-between gap-3 group cursor-pointer";
+          optBtn.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-xl bg-stone-50 border border-stone-200 group-hover:bg-amber-100 group-hover:border-amber-300 group-hover:text-amber-800 text-stone-500 font-bold text-xs flex items-center justify-center transition-all duration-300 font-mono">
+                ${charSymbol}
+              </span>
+              <span class="option-text font-semibold text-gray-800 text-sm md:text-base">${optText}</span>
+            </div>
+            <!-- 피드백용 아이콘 홀더 -->
+            <div class="feedback-icon opacity-0 transform scale-0 transition-all duration-300"></div>
+          `;
+
+          // 클릭 콜백 지정
+          optBtn.addEventListener("click", () => handleSelectOption(optBtn, optText, currentData));
+          optionsGroup.appendChild(optBtn);
+        });
+      }
+
+      /**
+       * 플레이어 선지 선택 동작에 따른 직각적인 칼라 피드백 및 정답 확인
+       */
+      function handleSelectOption(clickedBtn, selectedText, questionData) {
+        // 이미 푼 이력이 있다면 터치 거부 차단
+        const allButtons = document.querySelectorAll(".option-btn");
+        const nextQuestionBtn = document.getElementById("btn-next-question");
+        if (nextQuestionBtn.disabled === false) return; // 이미 정답 피드백이 처리된 상태인 경우 탈출
+
+        const isCorrect = (selectedText === questionData.answer);
+        
+        // 제출 데이터 정합성 기록 적재 (오답노트 배포용 풍성한 매핑을 전달)
+        userQuizResponses.push({
+          type: questionData.type,
+          direction: questionData.direction,
+          spanishName: questionData.originalItem.spanish,
+          koreanName: questionData.originalItem.korean,
+          question: questionData.question,
+          answer: questionData.answer,
+          selected: selectedText,
+          isCorrect: isCorrect,
+          exampleSpan: questionData.originalItem.exampleSpan,
+          exampleKor: questionData.originalItem.exampleKor,
+          explanation: questionData.originalItem.explanation
+        });
+
+        if (isCorrect) {
+          score += 10; // 10점 득점 합산
+          document.getElementById("quiz-live-score").textContent = `${score}점`;
+        }
+
+        // 4개 버튼 전체 룩업 피드백 염색 돌입
+        allButtons.forEach(btn => {
+          const textSpan = btn.querySelector(".option-text");
+          const iconContainer = btn.querySelector(".feedback-icon");
+          const charContainer = btn.querySelector(".font-mono");
+          
+          // 모든 버튼 잠금 처리
+          btn.style.pointerEvents = "none";
+          btn.classList.add("bg-stone-50/70", "border-stone-150");
+          btn.classList.remove("hover:border-amber-300", "hover:bg-amber-50/20");
+
+          const textVal = textSpan.textContent;
+
+          if (textVal === questionData.answer) {
+            // 정답 표시: 비취색 테두리
+            btn.className = "option-btn w-full text-left p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-50/30 transition-all duration-300 outline-none flex items-center justify-between gap-3 group scale-[1.01]";
+            charContainer.className = "w-8 h-8 rounded-xl bg-emerald-500 text-white font-bold text-xs flex items-center justify-center font-mono";
+            
+            // 검증 체크 SVG 인서트
+            iconContainer.innerHTML = `
+              <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+            `;
+            iconContainer.classList.remove("opacity-0", "scale-0");
+            iconContainer.classList.add("opacity-105", "scale-100");
+          } else if (textVal === selectedText && !isCorrect) {
+            // 틀림 찍은 오답 표시: 크림슨 레드화
+            btn.className = "option-btn w-full text-left p-4 rounded-2xl border-2 border-rose-500 bg-rose-50/30 transition-all duration-300 outline-none flex items-center justify-between gap-3 group scale-[1.01]";
+            charContainer.className = "w-8 h-8 rounded-xl bg-rose-500 text-white font-bold text-xs flex items-center justify-center font-mono";
+            
+            // 불합격 가위표 SVG 전술 이식
+            iconContainer.innerHTML = `
+              <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            `;
+            iconContainer.classList.remove("opacity-0", "scale-0");
+            iconContainer.classList.add("opacity-105", "scale-100");
+          }
+        });
+
+        // 실시간 복습 피드백 박스 동률 렌더링
+        const feedbackBox = document.getElementById("quiz-feedback-box");
+        feedbackBox.classList.remove("invisible");
+        
+        let feedbackDetails = "";
+        if (questionData.direction === "span_to_kor") {
+          feedbackDetails = `<strong>"${questionData.question}"</strong>의 뜻은 "<strong>${questionData.answer}</strong>"이 부합합니다.`;
+        } else {
+          feedbackDetails = `<strong>"${questionData.question}"</strong>에 부합하는 올바른 스페인어는 "<strong>${questionData.answer}</strong>"입니다.`;
+        }
+
+        if (isCorrect) {
+          feedbackBox.className = "mt-6 p-4 rounded-2xl flex items-start gap-3 border border-emerald-200 bg-emerald-50/40 text-emerald-900";
+          feedbackBox.innerHTML = `
+            <div class="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold flex-shrink-0 animate-bounce">¡Correcto!</div>
+            <div>
+              <p class="text-xs font-bold text-emerald-800">참 잘하셨어요!</p>
+              <p class="text-xs text-emerald-700/85 mt-1">${feedbackDetails}</p>
+              <p class="text-[10px] text-emerald-600/90 mt-1 italic font-serif">"${questionData.originalItem.exampleSpan}" (${questionData.originalItem.exampleKor})</p>
+            </div>
+          `;
+        } else {
+          // 오답인 경우 정답 공개
+          feedbackBox.className = "mt-6 p-4 rounded-2xl flex items-start gap-3 border border-rose-200 bg-rose-50/40 text-rose-900";
+          feedbackBox.innerHTML = `
+            <div class="px-2.5 py-0.5 bg-rose-100 text-rose-800 rounded-full text-xs font-bold flex-shrink-0">¡Oops!</div>
+            <div>
+              <p class="text-xs font-bold text-rose-800">오답입니다. 정답 전격 공개!</p>
+              <p class="text-xs text-rose-700/85 mt-1">${feedbackDetails}</p>
+              <p class="text-[10px] text-rose-600/95 mt-1.5 leading-relaxed bg-white/50 p-2 rounded-lg border border-rose-100/40">
+                <strong>💡 해설:</strong> ${questionData.originalItem.explanation}
+              </p>
+            </div>
+          `;
+        }
+
+        // 다음 단계 제어 단추 잠금 해제 설정
+        nextQuestionBtn.disabled = false;
+        
+        // 최종 문항인 경우 텍스트 분기 처리
+        const isFinal = (currentQuestionIdx === 9);
+        const nextText = document.getElementById("btn-next-text");
+        if (isFinal) {
+          nextText.textContent = "최종 성적 확인하러 가기";
+        } else {
+          nextText.textContent = "다음 퀴즈로 가기 (Siguiente)";
+        }
+      }
+
+      /**
+       * 다음 문제 카드를 로드하거나, 최종 10단계 종전 시 결과 대시보드로 집결
+       */
+      async function handleNextQuestionFlow() {
+        if (currentQuestionIdx < 9) {
+          currentQuestionIdx++;
+          renderQuestion(currentQuestionIdx);
+        } else {
+          // 성적 분석 및 자동 클라우드 파이어스토어 저장 연계 처리 수행
+          await handleConcludeQuizStream();
+        }
+      }
+
+      /**
+       * 최종 평가 및 Firestore 연동 기록 보관
+       */
+      async function handleConcludeQuizStream() {
+        // 로더 레이어로 수치 변조전 임시 전환
+        transitionScreen(screenQuiz, screenLoading);
+
+        const charPayloadVal = selectedCharacter ? `${selectedCharacter.emoji} ${selectedCharacter.title}` : "💃 플라멩코 댄서";
+
+        // 오프라인 유틸용 스토어에 동시 누적 백업
+        saveLocalScoreRecord(playerNickname, charPayloadVal, score);
+
+        // Firebase Firestore 활성 온라인 기록 저장
+        if (isFirebaseConnected) {
+          try {
+            const documentId = `score_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            const scorePayload = {
+              nickname: playerNickname,
+              character: charPayloadVal,
+              score: parseInt(score),
+              timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await db.collection("scores").doc(documentId).set(scorePayload)
+              .catch(error => handleFirestoreDiagnosticError(error, "create", `scores/${documentId}`));
+            
+            console.log("Firestore 실시간 도전자 점수 및 캐릭터 기록 인가 성공:", scorePayload);
+          } catch (error) {
+            console.warn("Firestore 실시간 랭킹 원장 업로드 실패, 가치 유지 및 로컬 단으로 마감.", error);
+          }
+        }
+
+        // 화면 렌더링에 적합하게 랭킹 보드 새로고침
+        await refreshLeaderboard();
+
+        // 템플릿 요약 채우기
+        document.getElementById("result-nickname").textContent = playerNickname;
+        document.getElementById("result-final-score").textContent = score;
+        if (selectedCharacter) {
+          document.getElementById("result-partner-emoji").textContent = selectedCharacter.emoji;
+          document.getElementById("result-partner-title").textContent = selectedCharacter.title;
+        }
+        
+        const countOfCorrect = userQuizResponses.filter(r => r.isCorrect).length;
+        document.getElementById("result-correct-count").textContent = `${countOfCorrect}개`;
+
+        // 점수대별 가변 찬사 텍스트 인쇄
+        const resEmoji = document.getElementById("result-emoji");
+        const resGreeting = document.getElementById("result-greeting");
+
+        if (score === 100) {
+          resEmoji.textContent = "🏆";
+          resGreeting.textContent = "¡Perfecto! 완벽한 마스터피스입니다!";
+        } else if (score >= 80) {
+          resEmoji.textContent = "👑";
+          resGreeting.textContent = "¡Excelente! 합격점의 명예를 얻으셨습니다!";
+        } else if (score >= 50) {
+          resEmoji.textContent = "👍";
+          resGreeting.textContent = "¡Buen trabajo! 스페인어 실력을 굳혀보세요!";
+        } else {
+          resEmoji.textContent = "🌱";
+          resGreeting.textContent = "¡Ánimo! 끊김 없이 도전하다 보면 늘어날 거예요!";
+        }
+
+        // 집중 오답 노트 렌더링 배포
+        renderWrongAnswerNotebook();
+
+        // 결과 대시보드 화면 이관 노출
+        transitionScreen(screenLoading, screenResult);
+      }
+
+      /**
+       * 오답인 문항들만 정렬하여, 분석하기 쉬운 집중 피드백 뷰 카드로 채워줍니다.
+       */
+      function renderWrongAnswerNotebook() {
+        const listContainer = document.getElementById("wrong-notebook-list");
+        const wrongBadge = document.getElementById("wrong-count-badge");
+        listContainer.innerHTML = "";
+
+        const failedItems = userQuizResponses.filter(r => !r.isCorrect);
+        wrongBadge.textContent = `${failedItems.length}개`;
+
+        if (failedItems.length === 0) {
+          wrongBadge.className = "px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full";
+          listContainer.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-10 text-center bg-emerald-50/30 rounded-2xl border border-dashed border-emerald-100">
+              <span class="text-3xl mb-1.5">💯</span>
+              <p class="text-sm font-bold text-emerald-800">틀린 문제가 없습니다!</p>
+              <p class="text-xs text-emerald-600/80 mt-1">완성도 높은 완승입니다. 스페인 여행의 탄탄한 발판이 될 것입니다.</p>
+            </div>
+          `;
+          return;
+        }
+
+        wrongBadge.className = "px-2.5 py-0.5 bg-red-100 text-spanishRed text-xs font-bold rounded-full";
+
+        failedItems.forEach((item, idx) => {
+          const detailCard = document.createElement("div");
+          detailCard.className = "p-4 rounded-xl border border-red-100 bg-red-50/30 text-sm space-y-3 hover:shadow-md transition-all duration-300";
+          
+          const typeLabel = item.type === "word" ? "단어" : "문장";
+          const typeBadgeStyle = item.type === "word"
+            ? "bg-amber-100/70 text-amber-800 border border-amber-200"
+            : "bg-blue-100/70 text-blue-800 border border-blue-200";
+
+          detailCard.innerHTML = `
+            <!-- 상단 상태 표시줄 -->
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-spanishRed tracking-wide text-xs">오답 분석 #${idx+1}</span>
+              <span class="${typeBadgeStyle} px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block font-sans">${typeLabel}</span>
+            </div>
+            
+            <!-- 문제 내용 -->
+            <div class="space-y-1">
+              <p class="text-[10px] text-stone-400 font-bold uppercase tracking-wider">제시문 (${item.direction === "span_to_kor" ? "Spanish" : "Korean"})</p>
+              <p class="font-display font-black text-xl text-stone-900">${item.question}</p>
+            </div>
+
+            <!-- 정/오답 대조 그룹 -->
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <div class="bg-rose-50 border border-rose-100 rounded-lg p-2">
+                <p class="text-[9px] text-rose-500 font-bold tracking-tight uppercase">내가 고른 오답</p>
+                <p class="text-xs font-bold text-rose-900 mt-0.5">${item.selected}</p>
+              </div>
+              <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-2">
+                <p class="text-[9px] text-emerald-500 font-bold tracking-tight uppercase">올바른 뜻 (정답)</p>
+                <p class="text-xs font-bold text-emerald-950 mt-0.5">${item.answer}</p>
+              </div>
+            </div>
+
+            <!-- 학습 가이드 상세 정보 결합 -->
+            <div class="pt-2 border-t border-red-100/50 space-y-2">
+              <!-- 단어와 문장 원천 해독 -->
+              <div class="bg-white/80 p-2.5 rounded-lg border border-red-100/20 space-y-1">
+                <p class="text-[10px] text-stone-400 font-bold">📖 원본 어휘 구성: <span class="text-stone-800 font-black">${item.spanishName}</span> = <span class="text-stone-700 font-bold">${item.koreanName}</span></p>
+              </div>
+
+              <!-- 대표 예문 -->
+              <div class="bg-white/80 p-2.5 rounded-lg border border-red-100/20 space-y-1 flex flex-col">
+                <span class="inline-block px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 text-[9px] font-bold self-start">대표 예문 (Ejemplo)</span>
+                <p class="text-stone-900 font-semibold italic text-xs font-serif mt-1">${item.exampleSpan}</p>
+                <p class="text-stone-500 text-[10.5px] font-medium leading-relaxed mt-0.5">${item.exampleKor}</p>
+              </div>
+
+              <!-- 깊이 해설 -->
+              <div class="text-[10.5px] leading-relaxed text-stone-600 pl-1 border-l-2 border-amber-300">
+                <strong>💡 해설:</strong> ${item.explanation}
+              </div>
+            </div>
+          `;
+          listContainer.appendChild(detailCard);
+        });
+      }
+
+      /**
+       * 처음으로 완전히 리셋 회복하여 다시 실행 시켜주는 플로우
+       */
+      function handleResetGameFlow() {
+        const inputNickname = document.getElementById("input-nickname");
+        inputNickname.value = playerNickname; // 이전 닉네임 자동 존치 배려
+        document.getElementById("char-counter").textContent = `${playerNickname.length}/12자`;
+
+        // 캐릭터 선택 리셋
+        selectedCharacter = null;
+        document.getElementById("selected-char-emoji").textContent = "❓";
+        document.getElementById("selected-char-title").textContent = "캐릭터를 뽑아주세요";
+        document.getElementById("selected-char-title").className = "text-xs font-bold text-gray-400";
+        document.getElementById("character-card").className = "w-full sm:w-40 h-28 bg-white border-2 border-dashed border-amber-200 rounded-xl flex flex-col items-center justify-center p-3 transition-all duration-300 relative overflow-hidden group";
+        
+        const drawnStatus = document.getElementById("drawn-status");
+        drawnStatus.textContent = "미획득";
+        drawnStatus.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-500 border border-stone-200";
+
+        const btnDraw = document.getElementById("btn-draw-char");
+        btnDraw.disabled = false;
+        btnDraw.innerHTML = `<span>🎲 랜덤 캐릭터 뽑기 (Sorteo)</span>`;
+
+        updateStartButtonState();
+
+        transitionScreen(screenResult, screenStart);
+      }
+
+      // ========================================================
+      // [6.1] 계단형 학습 및 RPG 경험치(XP) 시스템 코어 엔진 추가
+      // ========================================================
+      
+      /**
+       * 로컬스토리지로부터 저장된 레벨, 경험치, 스테이지 정보를 동적으로 파싱 복구합니다.
+       */
+      function loadPlayerProfileLocally() {
+        try {
+          const lv = localStorage.getItem("spanish_quiz_player_level");
+          const xp = localStorage.getItem("spanish_quiz_player_xp");
+          const stage = localStorage.getItem("spanish_quiz_player_stage");
+          
+          if (lv) playerLevel = parseInt(lv);
+          if (xp) playerXp = parseInt(xp);
+          if (stage) currentStage = parseInt(stage);
+          
+          refreshXpHud();
+        } catch (e) {
+          console.warn("로컬 프로필 정보 복원 오류 발생:", e);
+        }
+      }
+
+      /**
+       * 로컬스토리지에 현재의 레벨, 경험치, 스테이지 상태를 동기화하여 보존합니다.
+       */
+      function savePlayerProfileLocally() {
+        try {
+          localStorage.setItem("spanish_quiz_player_level", playerLevel);
+          localStorage.setItem("spanish_quiz_player_xp", playerXp);
+          localStorage.setItem("spanish_quiz_player_stage", currentStage);
+        } catch (e) {
+          console.warn("로컬 프로필 정보 저장 에러 발생:", e);
+        }
+      }
+
+      /**
+       * 플레이어 경험치를 부여하고 경험치 획득 마일스톤에 맞추어 Level Up 임펄스를 표기합니다.
+       */
+      function addPlayerXp(amount) {
+        playerXp += amount;
+        
+        // 레벨 상승 판정 역추적
+        let newLevel = playerLevel;
+        for (let i = levelData.length - 1; i >= 0; i--) {
+          if (playerXp >= levelData[i].minXp) {
+            newLevel = levelData[i].level;
+            break;
+          }
+        }
+        
+        const isLevelUp = (newLevel > playerLevel);
+        if (isLevelUp) {
+          playerLevel = newLevel;
+          // 즉시 인지적인 알림 팝업 창 처리
+          alert(`🎉 ¡FELICITACIONES! 레벨 상승 성공! \n\n[ ${levelData[playerLevel-1].title} ] 등급으로 지위가 한층 향상되었습니다!`);
+        }
+        
+        savePlayerProfileLocally();
+        refreshXpHud();
+      }
+
+      /**
+       * 전단 시작 카드 HUD와 퀴즈 플레이어 HUD 내의 경험치 게이지 바 및 등급 명세를 일제히 갱신합니다.
+       */
+      function refreshXpHud() {
+        const currentLevelObj = levelData.find(l => l.level === playerLevel) || levelData[0];
+        const minXp = currentLevelObj.minXp;
+        const maxXp = currentLevelObj.maxXp === Infinity ? 2000 : currentLevelObj.maxXp;
+        
+        let percentage = 0;
+        if (maxXp > minXp) {
+          percentage = Math.min(100, Math.max(0, Math.round(((playerXp - minXp) / (maxXp - minXp)) * 100)));
+        } else {
+          percentage = 100;
+        }
+
+        const levelTitle = currentLevelObj.title;
+
+        // 시작 패널 HUD 자동 반영
+        const startLevelBadge = document.getElementById("start-level-badge");
+        if (startLevelBadge) startLevelBadge.textContent = levelTitle;
+        const startXpText = document.getElementById("start-xp-text");
+        if (startXpText) {
+          startXpText.textContent = currentLevelObj.maxXp === Infinity 
+            ? `${playerXp} XP (최대 마스터)` 
+            : `${playerXp} / ${maxXp} XP`;
+        }
+        const startXpBar = document.getElementById("start-xp-bar");
+        if (startXpBar) startXpBar.style.width = `${percentage}%`;
+
+        // 퀴즈 화면 실시간 게이지 연동
+        const staircaseLevelHud = document.getElementById("staircase-level-hud");
+        if (staircaseLevelHud) staircaseLevelHud.textContent = levelTitle;
+        const hudLevelTitle = document.getElementById("hud-level-title");
+        if (hudLevelTitle) hudLevelTitle.textContent = levelTitle;
+        const hudXpText = document.getElementById("hud-xp-text");
+        if (hudXpText) {
+          hudXpText.textContent = currentLevelObj.maxXp === Infinity 
+            ? `${playerXp} XP (Master)` 
+            : `${playerXp} / ${maxXp} XP`;
+        }
+        const hudXpPercent = document.getElementById("hud-xp-percent");
+        if (hudXpPercent) hudXpPercent.textContent = `${percentage}%`;
+        const hudXpBar = document.getElementById("hud-xp-bar");
+        if (hudXpBar) hudXpBar.style.width = `${percentage}%`;
+      }
+
+      /**
+       * 각 Stage 마다 할당되어 있는 고정 수량의 스페인 단어/문장 묶음을 제공합니다. (Stage 1~10)
+       */
+      function getVocabularyForStage(stage) {
+        if (!loadedVocabulary || loadedVocabulary.length === 0) {
+          loadedVocabulary = [...defaultVocabulary];
+        }
+        const words = loadedVocabulary.filter(v => v.type === "word");
+        const sentences = loadedVocabulary.filter(v => v.type === "sentence");
+        
+        switch (stage) {
+          case 1:
+            return [words[0], words[1], words[2]];
+          case 2:
+            return [words[3], words[4], words[5]];
+          case 3:
+            return [words[6], words[7], words[8]];
+          case 4:
+            return [words[9], words[10], sentences[0]];
+          case 5:
+            return [words[11], words[12], sentences[1]];
+          case 6:
+            return [words[13], sentences[2], sentences[3]];
+          case 7:
+            return [sentences[4], sentences[5], sentences[6]];
+          case 8:
+            return [sentences[7], sentences[8], sentences[9]];
+          case 9:
+            return [sentences[10], sentences[11], sentences[12]];
+          case 10:
+            return [sentences[13], sentences[14], words[14]];
+          default:
+            return [words[0], words[1], words[2]];
+        }
+      }
+
+      /**
+       * 상단 10단 계단 진행 노드 지표 바를 동적으로 도색 렌더링합니다.
+       * 현재(황색), 완료(녹색), 미달성(회색)을 스페인풍 이펙트로 연출합니다.
+       */
+      function renderStaircaseProgress() {
+        const nodesContainer = document.getElementById("staircase-nodes");
+        if (!nodesContainer) return;
+        nodesContainer.innerHTML = "";
+        
+        for (let s = 1; s <= 10; s++) {
+          const node = document.createElement("div");
+          node.className = "flex items-center flex-shrink-0";
+          
+          let circleClass = "";
+          let symbol = "";
+          
+          if (s < currentStage) {
+            circleClass = "bg-emerald-500 text-white border-2 border-emerald-600 shadow-sm";
+            symbol = "🟢";
+          } else if (s === currentStage) {
+            circleClass = "bg-spanishGold text-stone-900 border-2 border-amber-500 shadow-golden animate-pulse font-extrabold ring-2 ring-yellow-200";
+            symbol = "🟡";
+          } else {
+            circleClass = "bg-stone-100 text-stone-400 border border-stone-200/80";
+            symbol = "⚪";
+          }
+          
+          node.innerHTML = `
+            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-white border border-stone-200/50 shadow-sm">
+              <span class="${circleClass} w-5 h-5 rounded-lg flex items-center justify-center text-[10px] font-mono font-bold leading-none">
+                ${s}
+              </span>
+              <span class="text-[10px] font-extrabold text-stone-600">${symbol}</span>
+            </div>
+            ${s < 10 ? `
+              <svg class="w-3 h-3 text-stone-300 mx-0.5 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 5l7 7-7 7"/>
+              </svg>
+            ` : ''}
+          `;
+          nodesContainer.appendChild(node);
+        }
+      }
+
+      /**
+       * 해당 스테이지의 단어-뜻 예습 코스 사전학습 카드를 세로 배치하고 뷰 전환합니다.
+       */
+      function renderStagePreStudy() {
+        document.getElementById("staircase-progress-text").textContent = `Stage ${currentStage} / 10`;
+        renderStaircaseProgress();
+        refreshXpHud();
+        
+        const studyContainer = document.getElementById("stage-study-cards-list");
+        studyContainer.innerHTML = "";
+        
+        const stageVocab = getVocabularyForStage(currentStage);
+        
+        stageVocab.forEach((item, idx) => {
+          const card = document.createElement("div");
+          card.className = "bg-white p-4 rounded-xl border border-amber-100 shadow-sm space-y-2.5 hover:shadow transition-shadow duration-205";
+          
+          const typeLabel = item.type === "word" ? "단어" : "문장";
+          const typeBadgeStyle = item.type === "word"
+            ? "bg-amber-100/70 text-amber-800 border border-amber-200"
+            : "bg-blue-100/70 text-blue-800 border border-blue-200";
+
+          card.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center">
+                ${idx + 1}
+              </span>
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${typeBadgeStyle}">${typeLabel}</span>
+            </div>
+            <div>
+              <h4 class="font-display font-black text-lg text-spanishRed">${item.spanish}</h4>
+              <p class="text-xs text-stone-600 font-semibold mt-0.5">${item.korean}</p>
+            </div>
+            <div class="pl-2.5 border-l-2 border-amber-300 space-y-0.5 text-xs">
+              <p class="text-stone-900 font-serif italic font-semibold leading-relaxed">${item.exampleSpan}</p>
+              <p class="text-stone-500 text-[11px] leading-relaxed">${item.exampleKor}</p>
+            </div>
+            <p class="text-[10px] text-stone-500 leading-relaxed pt-1.5 border-t border-stone-100">
+              💡 <strong>알아두기:</strong> ${item.explanation}
+            </p>
+          `;
+          studyContainer.appendChild(card);
+        });
+
+        // 예습 패널 개시, 본 퀴즈 숨김 제어
+        document.getElementById("quiz-study-panel").classList.remove("hidden");
+        document.getElementById("quiz-test-panel").classList.add("hidden");
+      }
+
+      /**
+       * 예습에서 학습한 3개 단어 중에서 최종 출제될 4지선다 퀴즈를 무작위 생성합니다.
+       */
+      function buildStageQuiz(stage) {
+        const stageVocab = getVocabularyForStage(stage);
+        const itemObj = stageVocab[Math.floor(Math.random() * stageVocab.length)];
+        
+        const direction = Math.random() < 0.5 ? "span_to_kor" : "kor_to_span";
+        let questionText = "";
+        let correctAnswer = "";
+        let wrongOptions = [];
+        
+        const sameTypeVocabulary = loadedVocabulary.filter(v => v.type === itemObj.type);
+        
+        if (direction === "span_to_kor") {
+          questionText = itemObj.spanish;
+          correctAnswer = itemObj.korean;
+          
+          const otherMeanings = sameTypeVocabulary
+            .filter(v => v.korean !== itemObj.korean)
+            .map(v => v.korean);
+          wrongOptions = otherMeanings.sort(() => 0.5 - Math.random()).slice(0, 3);
+          
+          if (wrongOptions.length < 3) {
+            const anyOtherMeanings = loadedVocabulary
+              .filter(v => v.korean !== itemObj.korean)
+              .map(v => v.korean);
+            wrongOptions = anyOtherMeanings.sort(() => 0.5 - Math.random()).slice(0, 3);
+          }
+        } else {
+          questionText = itemObj.korean;
+          correctAnswer = itemObj.spanish;
+          
+          const otherSpans = sameTypeVocabulary
+            .filter(v => v.spanish !== itemObj.spanish)
+            .map(v => v.spanish);
+          wrongOptions = otherSpans.sort(() => 0.5 - Math.random()).slice(0, 3);
+          
+          if (wrongOptions.length < 3) {
+            const anyOtherSpans = loadedVocabulary
+              .filter(v => v.spanish !== itemObj.spanish)
+              .map(v => v.spanish);
+            wrongOptions = anyOtherSpans.sort(() => 0.5 - Math.random()).slice(0, 3);
+          }
+        }
+        
+        const optionsPool = [correctAnswer, ...wrongOptions].sort(() => 0.5 - Math.random());
+        
+        return {
+          originalItem: itemObj,
+          type: itemObj.type,
+          direction: direction,
+          question: questionText,
+          answer: correctAnswer,
+          options: optionsPool
+        };
+      }
+
+      let currentStageQuizData = null;
+
+      /**
+       * 사전 학습이 모두 완료된 후 퀴즈 풀기 돔을 화려하게 연출 개시합니다.
+       */
+      function handleStartStageQuiz() {
+        currentStageQuizData = buildStageQuiz(currentStage);
+        
+        document.getElementById("staircase-progress-text").textContent = `Stage ${currentStage} / 10`;
+        
+        const typeBadge = document.getElementById("quiz-question-type-badge");
+        const typeLabel = currentStageQuizData.type === "word" ? "단어 문제 (Palabra)" : "문장 문제 (Frase)";
+        typeBadge.textContent = typeLabel;
+        if (currentStageQuizData.type === "word") {
+          typeBadge.className = "text-[11px] font-bold text-amber-800 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full uppercase tracking-widest inline-block mb-3";
+        } else {
+          typeBadge.className = "text-[11px] font-bold text-blue-800 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full uppercase tracking-widest inline-block mb-3";
+        }
+
+        const guideText = document.getElementById("quiz-question-guide");
+        if (currentStageQuizData.direction === "span_to_kor") {
+          guideText.textContent = "가장 올바른 한국어 번역 뜻을 아래 보기 중에서 선출하세요.";
+        } else {
+          guideText.textContent = "한글 문장에 걸맞은 가장 정확한 스페인어 단어/문장을 선택하세요.";
+        }
+
+        document.getElementById("quiz-question-word").textContent = currentStageQuizData.question;
+
+        const optionsGroup = document.getElementById("quiz-options-group");
+        optionsGroup.innerHTML = "";
+
+        const feedbackBox = document.getElementById("quiz-feedback-box");
+        feedbackBox.classList.add("invisible");
+        feedbackBox.className = "mt-6 p-4 rounded-2xl invisible flex items-start gap-3 border transition-all duration-305";
+
+        const btnNext = document.getElementById("btn-next-question");
+        btnNext.disabled = true;
+        btnNext.innerHTML = `
+          <span id="btn-next-text">정답을 선택해주세요</span>
+          <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        `;
+
+        currentStageQuizData.options.forEach((optText, oIdx) => {
+          const charSymbol = ["A", "B", "C", "D"][oIdx];
+          
+          const optBtn = document.createElement("button");
+          optBtn.className = "option-btn w-full text-left p-4 rounded-2xl border-2 border-stone-100 hover:border-amber-300 hover:bg-amber-50/20 bg-white transition-all duration-300 outline-none flex items-center justify-between gap-3 group cursor-pointer";
+          optBtn.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-xl bg-stone-50 border border-stone-200 group-hover:bg-amber-100 group-hover:border-amber-300 group-hover:text-amber-800 text-stone-500 font-bold text-xs flex items-center justify-center transition-all duration-300 font-mono">
+                ${charSymbol}
+              </span>
+              <span class="option-text font-semibold text-gray-800 text-sm md:text-base">${optText}</span>
+            </div>
+            <div class="feedback-icon opacity-0 transform scale-0 transition-all duration-300"></div>
+          `;
+
+          optBtn.addEventListener("click", () => handleSelectStageOption(optBtn, optText, currentStageQuizData));
+          optionsGroup.appendChild(optBtn);
+        });
+
+        document.getElementById("quiz-study-panel").classList.add("hidden");
+        document.getElementById("quiz-test-panel").classList.remove("hidden");
+      }
+
+      /**
+       * 문항 보기를 클릭하면 즉시 정/오답 검수 후 경험치 수여 및 해설 카드를 열어줍니다.
+       */
+      function handleSelectStageOption(clickedBtn, selectedText, questionData) {
+        const allButtons = document.querySelectorAll(".option-btn");
+        const nextQuestionBtn = document.getElementById("btn-next-question");
+        if (nextQuestionBtn.disabled === false) return; // 연속 클릭 차단
+
+        const isCorrect = (selectedText === questionData.answer);
+        
+        userQuizResponses.push({
+          stage: currentStage,
+          type: questionData.type,
+          direction: questionData.direction,
+          spanishName: questionData.originalItem.spanish,
+          koreanName: questionData.originalItem.korean,
+          question: questionData.question,
+          answer: questionData.answer,
+          selected: selectedText,
+          isCorrect: isCorrect,
+          exampleSpan: questionData.originalItem.exampleSpan,
+          exampleKor: questionData.originalItem.exampleKor,
+          explanation: questionData.originalItem.explanation
+        });
+
+        if (isCorrect) {
+          score += 10; // 점수 가산 합산 기록 (최대 100점)
+          document.getElementById("quiz-live-score").textContent = `${score}점`;
+          
+          // 경험치 35 XP base 획득
+          addPlayerXp(35);
+        } else {
+          // 정직한 실패에도 소량 격려 경험치 수여
+          addPlayerXp(5);
+        }
+
+        allButtons.forEach(btn => {
+          const textSpan = btn.querySelector(".option-text");
+          const iconContainer = btn.querySelector(".feedback-icon");
+          const charContainer = btn.querySelector(".font-mono");
+          
+          btn.style.pointerEvents = "none";
+          btn.classList.add("bg-stone-50/70", "border-stone-150");
+          btn.classList.remove("hover:border-amber-300", "hover:bg-amber-50/20");
+
+          const textVal = textSpan.textContent;
+
+          if (textVal === questionData.answer) {
+            btn.className = "option-btn w-full text-left p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-50/30 transition-all duration-305 outline-none flex items-center justify-between gap-3 group scale-[1.01]";
+            charContainer.className = "w-8 h-8 rounded-xl bg-emerald-500 text-white font-bold text-xs flex items-center justify-center font-mono";
+            iconContainer.innerHTML = `
+              <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+            `;
+            iconContainer.classList.remove("opacity-0", "scale-0");
+            iconContainer.classList.add("opacity-100", "scale-100");
+          } else if (textVal === selectedText && !isCorrect) {
+            btn.className = "option-btn w-full text-left p-4 rounded-2xl border-2 border-rose-500 bg-rose-50/30 transition-all duration-305 outline-none flex items-center justify-between gap-3 group scale-[1.01]";
+            charContainer.className = "w-8 h-8 rounded-xl bg-rose-500 text-white font-bold text-xs flex items-center justify-center font-mono";
+            iconContainer.innerHTML = `
+              <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            `;
+            iconContainer.classList.remove("opacity-0", "scale-0");
+            iconContainer.classList.add("opacity-100", "scale-100");
+          }
+        });
+
+        const feedbackBox = document.getElementById("quiz-feedback-box");
+        feedbackBox.classList.remove("invisible");
+
+        let feedbackDetails = "";
+        if (questionData.direction === "span_to_kor") {
+          feedbackDetails = `<strong>"${questionData.question}"</strong>의 뜻은 "<strong>${questionData.answer}</strong>"이 완벽 부합합니다.`;
+        } else {
+          feedbackDetails = `<strong>"${questionData.question}"</strong>에 부합하는 올바른 스페인어는 "<strong>${questionData.answer}</strong>"입니다.`;
+        }
+
+        if (isCorrect) {
+          feedbackBox.className = "mt-6 p-4 rounded-2xl flex items-start gap-4 border border-emerald-200 bg-emerald-50/40 text-emerald-950";
+          feedbackBox.innerHTML = `
+            <div class="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 rounded-full text-xs font-bold flex-shrink-0 animate-bounce">¡Correcto!</div>
+            <div>
+              <p class="text-xs font-bold text-emerald-800">참 잘하셨어요! (+35 XP 획득)</p>
+              <p class="text-xs text-emerald-700/85 mt-1">${feedbackDetails}</p>
+              <p class="text-[10px] text-emerald-600/90 mt-1 italic font-serif">"${questionData.originalItem.exampleSpan}" (${questionData.originalItem.exampleKor})</p>
+            </div>
+          `;
+        } else {
+          feedbackBox.className = "mt-6 p-4 rounded-2xl flex items-start gap-4 border border-rose-200 bg-rose-50/40 text-rose-955";
+          feedbackBox.innerHTML = `
+            <div class="px-2.5 py-0.5 bg-rose-100 text-rose-800 rounded-full text-xs font-bold flex-shrink-0">¡Oops!</div>
+            <div>
+              <p class="text-xs font-bold text-rose-800">아쉽지만 오답입니다. 정답 전격 분석! (+5 XP)</p>
+              <p class="text-xs text-rose-700/85 mt-1">${feedbackDetails}</p>
+              <p class="text-[10.5px] text-rose-600/95 mt-2 leading-relaxed bg-white/50 p-2.5 rounded-lg border border-rose-100/40">
+                <strong>💡 해설 가이드:</strong> ${questionData.originalItem.explanation}
+              </p>
+            </div>
+          `;
+        }
+
+        nextQuestionBtn.disabled = false;
+        
+        const nextText = document.getElementById("btn-next-text");
+        if (currentStage === 5) {
+          nextText.textContent = "중간 고사 치르기 (Ir al Examen)";
+        } else if (currentStage === 10) {
+          nextText.textContent = "최종 졸업 고사 치르기 (Ir al Examen)";
+        } else {
+          nextText.textContent = "다음 스테이지로 전격 행진 (Siguiente)";
+        }
+      }
+
+      /**
+       * 다음 문제 단추를 클릭하면 중간고사 진도 차트 분석을 수행하거나 계단 스테이지를 안전 이송합니다.
+       */
+      function handleNextStageQuestionFlow() {
+        if (currentStage === 5) {
+          // 중간 고사 시동!
+          initiateExamen("mid");
+        } else if (currentStage === 10) {
+          // 최후 기말 졸업 고사 시동!
+          initiateExamen("final");
+        } else {
+          // 다음 계단 이동
+          currentStage++;
+          savePlayerProfileLocally();
+          renderStagePreStudy();
+        }
+      }
+
+      // ========================================================
+      // [6.2] 중간 및 최종 고사 (Exam Engine Core)
+      // ========================================================
+
+      /**
+       * 중간/기말고사의 전용 수험표를 끊고 시험 개요 서브 스크린을 렌더링합니다.
+       */
+      function initiateExamen(type) {
+        isExamMode = true;
+        examType = type;
+        examScore = 0;
+        currentExamIdx = 0;
+        examWrongResponses = [];
+
+        const badgeTitle = document.getElementById("exam-badge-title");
+        const mainTitle = document.getElementById("exam-main-title");
+        const descSubtitle = document.getElementById("exam-desc-subtitle");
+        const introTitle = document.getElementById("exam-intro-title");
+        const introText = document.getElementById("exam-intro-text");
+
+        if (type === "mid") {
+          badgeTitle.textContent = "중간 진도 점검 (Examen Parcial)";
+          mainTitle.textContent = "스페인어 기초 중간 고사";
+          descSubtitle.textContent = "Stage 1~5에서 고르게 발췌한 구역에서 5문제의 무작위 단어/문장 고사를 출제합니다.";
+          introTitle.textContent = "Stage 1 ~ 5 중간 시험 관문!";
+          introText.innerHTML = "합격 통과 컷은 <strong>60점 이상 (3문제 이상 성공)</strong>입니다. 이 중간 검문을 합격해야 Stage 6 등관문으로 나아가실 수 있습니다. 아는 내용을 점검해 보세요!";
+        } else {
+          badgeTitle.textContent = "최후의 시험 (Examen Final)";
+          mainTitle.textContent = "스페인어 영예의 최종 졸업 고사";
+          descSubtitle.textContent = "Stage 1~10 스페인어 전체 사전학습 영역에서 유기적으로 출제한 10문제의 기말고사를 진행합니다.";
+          introTitle.textContent = "스페인 단어 정복 대망의 최종 시험!";
+          introText.innerHTML = "합격 통과 기준은 <strong>60점 이상 (6문제 이상 성공)</strong>입니다. 마스터 클래스 수료증 제출과 전체 명예의 전당 등극을 위한 최종 도전입니다!";
+        }
+
+        document.getElementById("exam-hud-nickname").textContent = `${playerNickname} (${selectedCharacter ? selectedCharacter.title : ''})`;
+
+        // 데이터 출제 풀 확보
+        let vocabPool = [];
+        const limitCount = (type === "mid" ? 5 : 10);
+        const maxStageAllowed = (type === "mid" ? 5 : 10);
+        
+        for (let s = 1; s <= maxStageAllowed; s++) {
+          vocabPool.push(...getVocabularyForStage(s));
+        }
+
+        // 셔플 및 컷오프 문제 리스트 편성
+        const shuffledPool = [...vocabPool].sort(() => 0.5 - Math.random()).slice(0, limitCount);
+
+        currentExamQuizList = shuffledPool.map(itemObj => {
+          const direction = Math.random() < 0.5 ? "span_to_kor" : "kor_to_span";
+          let questionText = "";
+          let correctAnswer = "";
+          let wrongOptions = [];
+          
+          const sameTypeVocabulary = loadedVocabulary.filter(v => v.type === itemObj.type);
+          
+          if (direction === "span_to_kor") {
+            questionText = itemObj.spanish;
+            correctAnswer = itemObj.korean;
+            
+            const otherMeanings = sameTypeVocabulary
+              .filter(v => v.korean !== itemObj.korean)
+              .map(v => v.korean);
+            wrongOptions = otherMeanings.sort(() => 0.5 - Math.random()).slice(0, 3);
+          } else {
+            questionText = itemObj.korean;
+            correctAnswer = itemObj.spanish;
+            
+            const otherSpans = sameTypeVocabulary
+              .filter(v => v.spanish !== itemObj.spanish)
+              .map(v => v.spanish);
+            wrongOptions = otherSpans.sort(() => 0.5 - Math.random()).slice(0, 3);
+          }
+
+          if (wrongOptions.length < 3) {
+            wrongOptions = loadedVocabulary
+              .filter(v => v.spanish !== itemObj.spanish && v.korean !== itemObj.korean)
+              .map(v => (direction === "span_to_kor" ? v.korean : v.spanish))
+              .sort(() => 0.5 - Math.random()).slice(0, 3);
+          }
+
+          const optionsPool = [correctAnswer, ...wrongOptions].sort(() => 0.5 - Math.random());
+
+          return {
+            originalItem: itemObj,
+            direction: direction,
+            question: questionText,
+            answer: correctAnswer,
+            options: optionsPool
+          };
+        });
+
+        // 결과 서브 뷰 보정
+        document.getElementById("exam-intro-sub").classList.remove("hidden");
+        document.getElementById("exam-play-sub").classList.add("hidden");
+        document.getElementById("exam-result-sub").classList.add("hidden");
+
+        transitionScreen(screenQuiz, screenExam);
+      }
+
+      /**
+       * "시험 시작하기" 클릭 시 문제 풀이 화면으로 돌입합니다.
+       */
+      function handleStartExamPlay() {
+        document.getElementById("exam-intro-sub").classList.add("hidden");
+        document.getElementById("exam-play-sub").classList.remove("hidden");
+        
+        renderExamQuestion(0);
+      }
+
+      let selectedExamAnswer = null;
+
+      /**
+       * 특정 색인 번호의 중간/기말 문항 출제
+       */
+      function renderExamQuestion(idx) {
+        if (idx >= currentExamQuizList.length) return;
+        currentExamIdx = idx;
+        selectedExamAnswer = null;
+
+        const dataObj = currentExamQuizList[idx];
+
+        document.getElementById("exam-play-progress-text").textContent = `${idx + 1} / ${currentExamQuizList.length}`;
+        document.getElementById("exam-play-type-badge").textContent = `${examType === "mid" ? "중간 시험" : "최종 시험"} Q.${idx + 1}`;
+        document.getElementById("exam-play-question-word").textContent = dataObj.question;
+
+        const optionsGroup = document.getElementById("exam-play-options-group");
+        optionsGroup.innerHTML = "";
+
+        const btnNext = document.getElementById("btn-exam-next");
+        btnNext.disabled = true;
+        btnNext.innerHTML = `
+          <span>정답 선택 대기</span>
+          <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        `;
+
+        dataObj.options.forEach((optText, oIdx) => {
+          const charSymbol = ["A", "B", "C", "D"][oIdx];
+          
+          const optBtn = document.createElement("button");
+          optBtn.className = "exam-option-btn w-full text-left p-4 rounded-2xl border-2 border-stone-100 hover:border-stone-850 hover:bg-stone-50 bg-white transition-all duration-300 outline-none flex items-center justify-between gap-3 group cursor-pointer";
+          optBtn.innerHTML = `
+            <div class="flex items-center gap-3">
+              <span class="w-8 h-8 rounded-xl bg-stone-50 border border-stone-200 group-hover:bg-stone-900 group-hover:border-stone-900 group-hover:text-white text-stone-500 font-bold text-xs flex items-center justify-center transition-all duration-200 font-mono">
+                ${charSymbol}
+              </span>
+              <span class="exam-option-text font-semibold text-gray-800 text-sm md:text-base">${optText}</span>
+            </div>
+          `;
+
+          optBtn.addEventListener("click", () => handleSelectExamOption(optBtn, optText));
+          optionsGroup.appendChild(optBtn);
+        });
+      }
+
+      /**
+       * 시험 내 단일 보기 선택 시 미려한 하이라이팅 연출
+       */
+      function handleSelectExamOption(clickedBtn, optText) {
+        selectedExamAnswer = optText;
+        
+        const allButtons = document.querySelectorAll(".exam-option-btn");
+        allButtons.forEach(btn => {
+          btn.className = "exam-option-btn w-full text-left p-4 rounded-2xl border-2 border-stone-100 bg-white transition-all duration-200 outline-none flex items-center justify-between gap-3 group cursor-pointer";
+          const charSpan = btn.querySelector(".font-mono");
+          charSpan.className = "w-8 h-8 rounded-xl bg-stone-50 border border-stone-200 text-stone-500 font-bold text-xs flex items-center justify-center transition-all duration-200 font-mono";
+        });
+
+        clickedBtn.className = "exam-option-btn w-full text-left p-4 rounded-2xl border-2 border-stone-900 bg-stone-50/50 transition-all duration-200 outline-none flex items-center justify-between gap-3 group cursor-pointer ring-2 ring-stone-900/10";
+        const selectedCharSpan = clickedBtn.querySelector(".font-mono");
+        selectedCharSpan.className = "w-8 h-8 rounded-xl bg-stone-900 text-white font-bold text-xs flex items-center justify-center font-mono";
+
+        const nextBtn = document.getElementById("btn-exam-next");
+        nextBtn.disabled = false;
+        nextBtn.innerHTML = `
+          <span>정답 확인 및 다음으로 정립</span>
+          <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        `;
+      }
+
+      /**
+       * 시험 내에서 정합성을 확인하고 누적 정답 보존
+       */
+      function handleExamNextFlow() {
+        const dataObj = currentExamQuizList[currentExamIdx];
+        const isCorrect = (selectedExamAnswer === dataObj.answer);
+
+        if (isCorrect) {
+          examScore++;
+          // 시험 문제 정답 시 10 XP 가산 증정
+          addPlayerXp(10);
+        } else {
+          // 불합격 실패 시 오답 보카 과외용 적재
+          examWrongResponses.push(dataObj);
+        }
+
+        if (currentExamIdx < currentExamQuizList.length - 1) {
+          renderExamQuestion(currentExamIdx + 1);
+        } else {
+          concludeExamenResults();
+        }
+      }
+
+      /**
+       * 시험 최종 정산 및 통과 판정(60점 이상) 결과 표기
+       */
+      function concludeExamenResults() {
+        document.getElementById("exam-play-sub").classList.add("hidden");
+        document.getElementById("exam-result-sub").classList.remove("hidden");
+
+        const emojiEl = document.getElementById("exam-result-emoji");
+        const titleEl = document.getElementById("exam-result-title");
+        const scoreTextEl = document.getElementById("exam-result-score-text");
+        const failContainer = document.getElementById("exam-result-fail-container");
+        const revisionsList = document.getElementById("exam-failed-revisions-list");
+        const primaryActionBtn = document.getElementById("btn-exam-action-primary");
+
+        const totalQuestions = currentExamQuizList.length;
+        const correctCount = examScore;
+        const scorePercentage = Math.round((correctCount / totalQuestions) * 100);
+        const passed = (scorePercentage >= 60);
+
+        scoreTextEl.innerHTML = `귀하의 시험 성적표: <strong class="text-[17px] text-stone-950 font-mono font-black">${scorePercentage}점</strong> (${correctCount}개 합격 / ${totalQuestions}문제)`;
+
+        if (passed) {
+          emojiEl.textContent = "🏆";
+          titleEl.innerHTML = `<span class="text-emerald-600 font-black text-2xl uppercase tracking-wide">¡Aprobado! (시험 통과)</span>`;
+          failContainer.classList.add("hidden");
+
+          // 시험 자체 대규모 통과 축하 보너스 경험치 획득 지원
+          const bonusXp = (examType === "mid" ? 100 : 200);
+          addPlayerXp(bonusXp);
+
+          if (examType === "mid") {
+            primaryActionBtn.innerHTML = `<span>Stage 6 무사 입장하기 (Continuar) ➡️</span>`;
+            primaryActionBtn.onclick = () => {
+              isExamMode = false;
+              currentStage = 6;
+              savePlayerProfileLocally();
+              renderStagePreStudy();
+              transitionScreen(screenExam, screenQuiz);
+            };
+          } else {
+            primaryActionBtn.innerHTML = `<span>최종 성적표 랭킹 원장 제출하기 👑</span>`;
+            primaryActionBtn.onclick = async () => {
+              isExamMode = false;
+              // 기말고사 통과 달성 시, 퀴즈의 최종 누적 완주 완료로 이관 처리
+              await handleConcludeQuizStream();
+            };
+          }
+        } else {
+          emojiEl.textContent = "⚡";
+          titleEl.innerHTML = `<span class="text-rose-600 font-extrabold text-2xl uppercase tracking-wide">¡Suspenso! (아쉬운 불합격)</span>`;
+          failContainer.classList.remove("hidden");
+
+          revisionsList.innerHTML = "";
+          examWrongResponses.forEach((failObj, idx) => {
+            const item = failObj.originalItem;
+            const revCard = document.createElement("div");
+            revCard.className = "p-3.5 rounded-xl bg-rose-50 border border-rose-100 text-xs space-y-2";
+            revCard.innerHTML = `
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-rose-800 text-[11px]">수정 보충 학습 #${idx+1}</span>
+                <span class="px-2 py-0.2 rounded bg-white text-rose-700 border border-rose-200 text-[10px] font-bold font-mono">${item.type === "word" ? "단어" : "문장"}</span>
+              </div>
+              <div>
+                <h5 class="font-black text-stone-900 text-base">${item.spanish}</h5>
+                <p class="font-semibold text-stone-600 text-[12px] mt-0.5">${item.korean}</p>
+              </div>
+              <div class="pl-2.5 border-l-2 border-rose-300 text-[11px] font-serif italic text-stone-600">
+                "${item.exampleSpan}" (${item.exampleKor})
+              </div>
+              <p class="text-[10px] text-stone-500 pt-1 border-t border-rose-200/50 block"><strong>💡 해설:</strong> ${item.explanation}</p>
+            `;
+            revisionsList.appendChild(revCard);
+          });
+
+          primaryActionBtn.innerHTML = `<span>재시험 응시하기 (Re-examen) 🔄</span>`;
+          primaryActionBtn.onclick = () => {
+            initiateExamen(examType);
+          };
+        }
+      }
+
+      // ==========================================
+      // [6.3] 원래의 기본 게임 보완 통합 인터페이스
+      // ==========================================
+
+      /**
+       * 닉네임 유효성 판단 후, 계단형 퀴즈 사전 지대(Stage 1)로 가이드
+       */
+      async function handleStartQuizGame() {
+        const inputNickname = document.getElementById("input-nickname");
+        const rawNickname = inputNickname.value.trim();
+
+        if (rawNickname.length < 2 || rawNickname.length > 12) {
+          alert("도전자 닉네임은 최소 2자에서 12자 이내로 설정할 수 있습니다.");
+          inputNickname.focus();
+          const parentForm = inputNickname.closest(".bg-gradient-to-br") || inputNickname.closest(".bg-gradient-to-r") || inputNickname;
+          parentForm.classList.add("wiggle");
+          setTimeout(() => parentForm.classList.remove("wiggle"), 500);
+          return;
+        }
+
+        if (!selectedCharacter) {
+          alert("스페어어 퀴즈 동반자가 되어줄 랜덤 파트너 캐릭터를 먼저 뽑아주세요!");
+          return;
+        }
+
+        playerNickname = rawNickname;
+        
+        // 대장정 리셋 후 시작
+        currentStage = 1;
+        score = 0;
+        userQuizResponses = [];
+
+        savePlayerProfileLocally();
+        renderStagePreStudy();
+
+        transitionScreen(screenStart, screenQuiz);
+      }
+
+      /**
+       * 최종 평가 마스터 등극 및 파이어베이스 저장 연계
+       */
+      async function handleConcludeQuizStream() {
+        // 임시 로더 기동
+        transitionScreen(screenExam, screenLoading);
+        if (!screenResult.classList.contains("hidden")) {
+          transitionScreen(screenResult, screenLoading);
+        }
+
+        const charPayloadVal = selectedCharacter ? `${selectedCharacter.emoji} ${selectedCharacter.title}` : "💃 플라멩코 댄서";
+
+        // 오프라인용 스태시 백업저장
+        saveLocalScoreRecord(playerNickname, charPayloadVal, score, playerLevel, playerXp);
+
+        // 파이어베이스 업로드
+        if (isFirebaseConnected) {
+          try {
+            const documentId = `score_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+            const scorePayload = {
+              nickname: playerNickname,
+              character: charPayloadVal,
+              score: parseInt(score),
+              level: parseInt(playerLevel),
+              xp: parseInt(playerXp),
+              timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            await db.collection("scores").doc(documentId).set(scorePayload)
+              .catch(error => handleFirestoreDiagnosticError(error, "create", `scores/${documentId}`));
+            
+            console.log("Firestore 랭킹 원장 등극 완성:", scorePayload);
+          } catch (error) {
+            console.warn("Firestore 실시간 랭킹 원장 업로드 누락, 로컬 등치 보존.", error);
+          }
+        }
+
+        // 랭킹 보드 피드
+        await refreshLeaderboard();
+
+        // 결과 리포팅 카드 업데이트
+        document.getElementById("result-nickname").textContent = playerNickname;
+        document.getElementById("result-final-score").textContent = score;
+        if (selectedCharacter) {
+          document.getElementById("result-partner-emoji").textContent = selectedCharacter.emoji;
+          document.getElementById("result-partner-title").textContent = selectedCharacter.title;
+        }
+        
+        const countOfCorrect = userQuizResponses.filter(r => r.isCorrect).length;
+        document.getElementById("result-correct-count").textContent = `${countOfCorrect}개`;
+
+        const resEmoji = document.getElementById("result-emoji");
+        const resGreeting = document.getElementById("result-greeting");
+
+        if (score === 100) {
+          resEmoji.textContent = "🏆";
+          resGreeting.textContent = "¡Perfecto! 기적의 완벽한 마스터피스를 달성하셨습니다!";
+        } else if (score >= 80) {
+          resEmoji.textContent = "👑";
+          resGreeting.textContent = "¡Excelente! 스페인어 인프라스트럭처가 완벽히 구성되었습니다!";
+        } else if (score >= 50) {
+          resEmoji.textContent = "👍";
+          resGreeting.textContent = "¡Buen trabajo! 탄탄하게 실력을 다져보세요!";
+        } else {
+          resEmoji.textContent = "🌱";
+          resGreeting.textContent = "¡Ánimo! 포기하지 않으면 마스터 장벽을 돌파할 것입니다!";
+        }
+
+        renderWrongAnswerNotebook();
+
+        transitionScreen(screenLoading, screenResult);
+      }
+
+      /**
+       * 오답인 문항들만 집중 피드백 뷰 카드로 채워줍니다.
+       */
+      function renderWrongAnswerNotebook() {
+        const listContainer = document.getElementById("wrong-notebook-list");
+        const wrongBadge = document.getElementById("wrong-count-badge");
+        listContainer.innerHTML = "";
+
+        const failedItems = userQuizResponses.filter(r => !r.isCorrect);
+        wrongBadge.textContent = `${failedItems.length}개`;
+
+        if (failedItems.length === 0) {
+          wrongBadge.className = "px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full";
+          listContainer.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-10 text-center bg-emerald-50/30 rounded-2xl border border-dashed border-emerald-100">
+              <span class="text-3xl mb-1.5">💯</span>
+              <p class="text-sm font-bold text-emerald-800">틀린 문제가 없습니다!</p>
+              <p class="text-xs text-emerald-600/80 mt-1">완벽주의적인 완승입니다. 스페인 여행의 탄탄한 자양분이 될 것입니다.</p>
+            </div>
+          `;
+          return;
+        }
+
+        wrongBadge.className = "px-2.5 py-0.5 bg-red-100 text-spanishRed text-xs font-bold rounded-full";
+
+        failedItems.forEach((item, idx) => {
+          const detailCard = document.createElement("div");
+          detailCard.className = "p-4 rounded-xl border border-red-100 bg-red-50/30 text-sm space-y-3 hover:shadow-md transition-all duration-300";
+          
+          const typeLabel = item.type === "word" ? "단어" : "문장";
+          const typeBadgeStyle = item.type === "word"
+            ? "bg-amber-100/70 text-amber-800 border border-amber-200"
+            : "bg-blue-100/70 text-blue-800 border border-blue-200";
+
+          detailCard.innerHTML = `
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-spanishRed tracking-wide text-xs">오답 정밀 분석 #${idx+1}</span>
+              <span class="${typeBadgeStyle} px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-block font-sans">${typeLabel}</span>
+            </div>
+            
+            <div class="space-y-1">
+              <p class="text-[10px] text-stone-400 font-bold uppercase tracking-wider">제시문 (Stage ${item.stage || 'N/A'})</p>
+              <p class="font-display font-black text-xl text-stone-900">${item.question}</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-1">
+              <div class="bg-rose-50 border border-rose-100 rounded-lg p-2">
+                <p class="text-[9px] text-rose-500 font-bold tracking-tight uppercase">내가 고른 오답</p>
+                <p class="text-xs font-bold text-rose-900 mt-0.5">${item.selected}</p>
+              </div>
+              <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-2">
+                <p class="text-[9px] text-emerald-500 font-bold tracking-tight uppercase">올바른 정답</p>
+                <p class="text-xs font-bold text-emerald-950 mt-0.5">${item.answer}</p>
+              </div>
+            </div>
+
+            <div class="pt-2 border-t border-red-100/50 space-y-2">
+              <div class="bg-white/80 p-2.5 rounded-lg border border-red-100/20 space-y-1">
+                <p class="text-[10px] text-stone-400 font-bold">📖 원본 어휘 구성: <span class="text-stone-800 font-black">${item.spanishName}</span> = <span class="text-stone-700 font-bold">${item.koreanName}</span></p>
+              </div>
+
+              <div class="bg-white/80 p-2.5 rounded-lg border border-red-100/20 space-y-1 flex flex-col">
+                <span class="inline-block px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 text-[9px] font-bold self-start">대표 예문 (Ejemplo)</span>
+                <p class="text-stone-900 font-semibold italic text-xs font-serif mt-1">${item.exampleSpan}</p>
+                <p class="text-stone-500 text-[10.5px] font-medium leading-relaxed mt-0.5">${item.exampleKor}</p>
+              </div>
+
+              <div class="text-[10.5px] leading-relaxed text-stone-600 pl-1 border-l-2 border-amber-300">
+                <strong>💡 해설:</strong> ${item.explanation}
+              </div>
+            </div>
+          `;
+          listContainer.appendChild(detailCard);
+        });
+      }
+
+      /**
+       * 처음으로 완전히 리셋 회복하여 다시 실행 시켜주는 플로우
+       */
+      function handleResetGameFlow() {
+        const inputNickname = document.getElementById("input-nickname");
+        inputNickname.value = playerNickname; // 이전 닉네임 자동 존치 배려
+        document.getElementById("char-counter").textContent = `${playerNickname.length}/12자`;
+
+        // 캐릭터 선택 리셋
+        selectedCharacter = null;
+        document.getElementById("selected-char-emoji").textContent = "❓";
+        document.getElementById("selected-char-title").textContent = "캐릭터를 뽑아주세요";
+        document.getElementById("selected-char-title").className = "text-xs font-bold text-gray-400";
+        document.getElementById("character-card").className = "w-full sm:w-40 h-28 bg-white border-2 border-dashed border-amber-200 rounded-xl flex flex-col items-center justify-center p-3 transition-all duration-300 relative overflow-hidden group";
+        
+        const drawnStatus = document.getElementById("drawn-status");
+        drawnStatus.textContent = "미획득";
+        drawnStatus.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-500 border border-stone-200";
+
+        const btnDraw = document.getElementById("btn-draw-char");
+        btnDraw.disabled = false;
+        btnDraw.innerHTML = `<span>🎲 랜덤 캐릭터 뽑기 (Sorteo)</span>`;
+
+        // RPG 스테이지 진행 정보 극비 전원 백업 초기화
+        currentStage = 1;
+        score = 0;
+        userQuizResponses = [];
+        savePlayerProfileLocally();
+        refreshXpHud();
+
+        updateStartButtonState();
+
+        transitionScreen(screenResult, screenStart);
+      }
+
+      // ==========================================
+      // [7] 수평적 로컬 스토리지 오프라인 백업 엔진
+      // ==========================================
+      /**
+       * 오프라인 환경에 적합하도록 로컬 메모리상 가변 등수표를 불러와 연산합니다.
+       */
+      function loadLocalFallbackLeaderboard() {
+        const key = "spanish_quiz_high_scores";
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) return [];
+          const list = JSON.parse(raw);
+          // 점수 내림차순 정렬 후 반환
+          return list
+            .map(item => ({
+              ...item,
+              level: item.level || 1,
+              xp: item.xp || 0,
+              timestamp: new Date(item.timestamp)
+            }))
+            .sort((a,b) => b.score - a.score || b.timestamp - a.timestamp)
+            .slice(0, 5);
+        } catch (e) {
+          console.warn("로컬 스토리지 읽기 에러 발생:", e);
+          return [];
+        }
+      }
+
+      /**
+       * 로컬스토리지 전용 스코어 백업 저장소 핸들러
+       */
+      function saveLocalScoreRecord(nickStr, charStr, finalScore, levelVal, xpVal) {
+        const key = "spanish_quiz_high_scores";
+        try {
+          const stored = localStorage.getItem(key);
+          let list = [];
+          if (stored) {
+            list = JSON.parse(stored);
+          }
+          list.push({
+            nickname: nickStr,
+            character: charStr,
+            score: finalScore,
+            level: levelVal || 1,
+            xp: xpVal || 0,
+            timestamp: new Date().toISOString()
+          });
+          localStorage.setItem(key, JSON.stringify(list));
+        } catch (e) {
+          console.error("로컬 스토리지 백업 보존 실패:", e);
+        }
+      }
+
+      /**
+       * 시작 버튼 활성화 조건을 감수하여 클래스 및 인터액션을 실시간 가변 튜닝합니다.
+       */
+      function updateStartButtonState() {
+        const btnStart = document.getElementById("btn-start");
+        const inputNickname = document.getElementById("input-nickname");
+        const nicknameValue = inputNickname.value.trim();
+
+        if (selectedCharacter && nicknameValue.length >= 2 && nicknameValue.length <= 12) {
+          btnStart.disabled = false;
+          btnStart.className = "w-full sm:w-auto px-8 py-3.5 bg-gradient-to-r from-spanishRed to-red-650 text-white rounded-xl font-bold text-sm tracking-widest shadow-premium transition-all duration-300 hover:scale-[1.03] hover:shadow-xl active:scale-[0.98] outline-none flex items-center justify-center gap-2 cursor-pointer";
+        } else {
+          btnStart.disabled = true;
+          btnStart.className = "w-full sm:w-auto px-8 py-3.5 bg-stone-200 text-stone-400 rounded-xl font-bold text-sm tracking-widest transition-all duration-300 outline-none flex items-center justify-center gap-2 cursor-not-allowed";
+        }
+      }
+
+      /**
+       * 랜덤 캐릭터를 주사위처럼 튕겨가며 재미있게 추첨해주는 가차 애니메이션
+       */
+      function handleDrawCharacter() {
+        const btnDraw = document.getElementById("btn-draw-char");
+        const charEmojiSpan = document.getElementById("selected-char-emoji");
+        const charTitleSpan = document.getElementById("selected-char-title");
+        const charCard = document.getElementById("character-card");
+        const drawnStatus = document.getElementById("drawn-status");
+
+        // 로테이션 중 중복 실행 차단 방어
+        if (btnDraw.disabled) return;
+        btnDraw.disabled = true;
+        btnDraw.innerHTML = `<span>⏳ 운명 결정 중 (Sorteando...)</span>`;
+
+        // 닉네임 입력도 확인해주면 더 안전함
+        const inputNickname = document.getElementById("input-nickname");
+        if (inputNickname.value.trim().length === 0) {
+          alert("먼저 도전하실 닉네임을 기입해주시면 멋지게 매칭해드릴게요!");
+          inputNickname.focus();
+          btnDraw.disabled = false;
+          btnDraw.innerHTML = `<span>🎲 랜덤 캐릭터 뽑기 (Sorteo)</span>`;
+          return;
+        }
+
+        let rotateIdx = 0;
+        let speed = 60; // 로테이션 속도(ms)
+        let duration = 900; // 로테이션 시간(ms)
+        let elapsed = 0;
+
+        charCard.className = "w-full sm:w-40 h-28 bg-white border-2 border-spanishGold rounded-xl flex flex-col items-center justify-center p-3 transition-all duration-300 relative overflow-hidden ring-4 ring-amber-100 scale-102";
+
+        const interval = setInterval(() => {
+          const tempChar = characters[rotateIdx % characters.length];
+          charEmojiSpan.textContent = tempChar.emoji;
+          charTitleSpan.textContent = tempChar.title;
+          rotateIdx++;
+          elapsed += speed;
+
+          if (elapsed >= duration) {
+            clearInterval(interval);
+            
+            // 최종 매칭 확정
+            const finalChar = characters[Math.floor(Math.random() * characters.length)];
+            selectedCharacter = finalChar;
+
+            charEmojiSpan.textContent = finalChar.emoji;
+            charEmojiSpan.className = "text-4xl scale-110 mb-1 transition-all duration-300 select-none animate-none";
+            charTitleSpan.textContent = finalChar.title;
+            charTitleSpan.className = "text-[11px] font-bold text-rose-900 tracking-wide";
+
+            charCard.className = "w-full sm:w-40 h-28 bg-gradient-to-br from-amber-50 to-amber-100/50 border-2 border-spanishGold rounded-xl flex flex-col items-center justify-center p-3 transition-all duration-300 relative overflow-hidden scale-100 shadow-md";
+
+            drawnStatus.textContent = "매칭 완료";
+            drawnStatus.className = "px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-850 border border-amber-300";
+
+            btnDraw.disabled = false;
+            btnDraw.innerHTML = `<span>🎲 랜덤 재추첨 하기 (Re-sorteo)</span>`;
+
+            // 시작 버튼 활성화 갱신
+            updateStartButtonState();
+          }
+        }, speed);
+      }
+
+      // ==========================================
+      // [8] 시스템 인지도 유틸리티 (Helpers)
+      // ==========================================
+      /**
+       * 화면전환 전용 부드러운 하이드-쇼 스왑 유틸 클래스 제어
+       */
+      function transitionScreen(fromScreen, toScreen) {
+        if (fromScreen) {
+          fromScreen.classList.add("hidden");
+        }
+        if (toScreen) {
+          toScreen.classList.remove("hidden");
+          toScreen.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+
+      /**
+       * 보안적인 인젝션 방지를 위한 기초 새니타이저
+       */
+      function sanitizeHTML(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      /**
+       * 날짜 포맷 최적화 간결화 표기기
+       */
+      function formatDate(dateObj) {
+        if (!dateObj) return "";
+        try {
+          const d = new Date(dateObj);
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const h = String(d.getHours()).padStart(2, '0');
+          const min = String(d.getMinutes()).padStart(2, '0');
+          return `${y}-${m}-${day} ${h}:${min}`;
+        } catch (e) {
+          return "";
+        }
+      }
+
+      /**
+       * Firestore 전용 진단 오류 포장기 (Firebase integration rules)
+       */
+      function handleFirestoreDiagnosticError(error, opType, pathStr) {
+        // "인증 및 인가 누락" 오류 포맷을 상세한 JSON 구조로 변환하여 로깅 던져줌
+        const errObj = {
+          error: error instanceof Error ? error.message : String(error),
+          operationType: opType,
+          path: pathStr,
+          authInfo: {
+            userId: null,
+            email: null,
+            emailVerified: null,
+            isAnonymous: true
+          }
+        };
+        console.error("Firestore 진밀 보안 예외 검출: ", JSON.stringify(errObj));
+        throw new Error(JSON.stringify(errObj));
+      }
+    </script>
+  </body>
+</html>

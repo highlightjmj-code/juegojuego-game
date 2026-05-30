@@ -1,0 +1,72 @@
+{
+  "entities": {
+    "Score": {
+      "title": "Score",
+      "description": "User quiz score record",
+      "type": "object",
+      "properties": {
+        "nickname": {
+          "type": "string",
+          "description": "User nickname"
+        },
+        "character": {
+          "type": "string",
+          "description": "Selected avatar character emoji and title"
+        },
+        "score": {
+          "type": "integer",
+          "description": "Quiz final score"
+        },
+        "level": {
+          "type": "integer",
+          "description": "Learner's current level"
+        },
+        "xp": {
+          "type": "integer",
+          "description": "Learner's total earned experience points"
+        },
+        "timestamp": {
+          "type": "object",
+          "description": "Timestamp of the score submission"
+        }
+      },
+      "required": [
+        "nickname",
+        "character",
+        "score",
+        "level",
+        "xp",
+        "timestamp"
+      ]
+    },
+    "Word": {
+      "title": "Word",
+      "description": "Spanish-Korean vocabulary word",
+      "type": "object",
+      "properties": {
+        "spanish": {
+          "type": "string",
+          "description": "Spanish word"
+        },
+        "korean": {
+          "type": "string",
+          "description": "Korean meaning"
+        }
+      },
+      "required": [
+        "spanish",
+        "korean"
+      ]
+    }
+  },
+  "firestore": {
+    "/scores/{scoreId}": {
+      "schema": "Score",
+      "description": "Collection of user quiz scores"
+    },
+    "/words/{wordId}": {
+      "schema": "Word",
+      "description": "Collection of Spanish vocabulary words"
+    }
+  }
+}

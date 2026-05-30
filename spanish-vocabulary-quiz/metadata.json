@@ -1,0 +1,6 @@
+{
+  "name": "Spanish Vocabulary Quiz",
+  "description": "스페인어 기초 단어 학습을 위한 4지선다형 퀴즈 웹사이트입니다. Firestore 연동을 통해 실시간 랭킹 및 퀴즈 완료 점수를 기록하고 관리합니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
